@@ -1,4 +1,4 @@
-[app]
+k[app]
 
 title = TRIADES
 package.name = triades
@@ -15,15 +15,6 @@ fullscreen = 0
 
 p4a.branch = develop
 
-
-[buildozer]
-
-log_level = 2
-warn_on_root = 1
-
-
-[android]
-
 android.archs = arm64-v8a
 android.minapi = 23
 android.api = 36
@@ -34,3 +25,9 @@ android.sdk_path = /home/runner/android-sdk
 android.accept_sdk_license = True
 
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
+
+
+[buildozer]
+
+log_level = 2
+warn_on_root = 1
