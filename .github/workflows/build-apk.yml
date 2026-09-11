@@ -37,7 +37,7 @@ jobs:
       - name: Instalar Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Instalar dependências Python
         run: |
@@ -46,7 +46,14 @@ jobs:
           python -m pip install "cython==0.29.34"
           python -m pip install git+https://github.com/kivy/buildozer.git
 
+      - name: Aceitar licenças Android
+        run: |
+          mkdir -p "$HOME/.buildozer/android/platform/android-sdk/licenses"
+          yes | sdkmanager --licenses || true
+
       - name: Gerar APK
+        env:
+          P4A_ACCEPT_LICENSE: "1"
         run: |
           buildozer -v android debug
 
