@@ -29,27 +29,30 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git zip unzip wget autoconf libtool pkg-config \
+            git zip unzip wget curl autoconf libtool pkg-config \
             zlib1g-dev libncurses5-dev libtinfo6 \
             cmake libffi-dev libssl-dev automake \
             autopoint gettext libltdl-dev
 
       - name: Instalar Android SDK
         run: |
-          mkdir -p "$HOME/android-sdk/cmdline-tools"
+          mkdir -p "$HOME/android-sdk/cmdline-tools/latest"
           cd "$HOME/android-sdk"
 
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
 
           unzip -q commandlinetools-linux-13114758_latest.zip
 
-          mkdir -p cmdline-tools/latest
-          mv cmdline-tools/cmdline-tools/* cmdline-tools/latest/
+          mv cmdline-tools/* "$HOME/android-sdk/cmdline-tools/latest/" || true
 
           echo "ANDROIDSDK=$HOME/android-sdk" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Verificar Android SDK
+        run: |
+          sdkmanager --version
 
       - name: Aceitar licenças Android
         run: |
