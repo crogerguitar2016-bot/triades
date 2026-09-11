@@ -29,25 +29,24 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git zip unzip wget curl \
-            autoconf libtool pkg-config \
+            git zip unzip wget autoconf libtool pkg-config \
             zlib1g-dev libncurses5-dev libtinfo6 \
             cmake libffi-dev libssl-dev automake \
             autopoint gettext libltdl-dev
 
-      - name: Instalar Rust
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
-      - name: Instalar Android Command Line Tools
+      - name: Instalar Android SDK
         run: |
           mkdir -p "$HOME/android-sdk/cmdline-tools"
           cd "$HOME/android-sdk"
+
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+
           unzip -q commandlinetools-linux-13114758_latest.zip
+
           mkdir -p cmdline-tools/latest
-          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+          mv cmdline-tools/cmdline-tools/* cmdline-tools/latest/
+
+          echo "ANDROIDSDK=$HOME/android-sdk" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
@@ -58,7 +57,15 @@ jobs:
 
       - name: Instalar componentes Android
         run: |
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;37.0.0"
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;37.0.0"
+
+      - name: Instalar Rust
+        run: |
+          curl https://sh.rust.rs -sSf | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Instalar dependências Python
         run: |
@@ -69,8 +76,6 @@ jobs:
 
       - name: Gerar APK
         env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
           P4A_ACCEPT_LICENSE: "1"
         run: |
           buildozer -v android debug
