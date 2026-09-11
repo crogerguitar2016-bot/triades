@@ -29,6 +29,8 @@ android.minapi = 23
 android.api = 36
 android.ndk = 29
 
+android.sdk_path = /home/runner/android-sdk
+
 android.accept_sdk_license = True
 
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
