@@ -1,4 +1,4 @@
-k[app]
+[app]
 
 title = TRIADES
 package.name = triades
