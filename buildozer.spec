@@ -29,4 +29,6 @@ android.minapi = 23
 android.api = 36
 android.ndk = 29
 
+android.accept_sdk_license = True
+
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
