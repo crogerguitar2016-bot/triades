@@ -98,7 +98,7 @@ jobs:
       - name: Preparar Python-for-Android
         run: |
           rm -rf "$HOME/p4a"
-          git clone --depth 1 https://github.com/kivy/python-for-android.git "$HOME/p4a"
+          git clone --depth 1 --branch develop https://github.com/kivy/python-for-android.git "$HOME/p4a"
 
           echo "Python-for-Android:"
           ls -la "$HOME/p4a"

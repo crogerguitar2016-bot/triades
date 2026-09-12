@@ -14,6 +14,7 @@ orientation = portrait
 fullscreen = 0
 
 p4a.branch = develop
+p4a.source_dir = /home/runner/p4a
 
 android.archs = arm64-v8a
 android.minapi = 23
@@ -21,7 +22,6 @@ android.api = 36
 android.ndk = 29
 
 android.sdk_path = /home/runner/android-sdk
-
 android.accept_sdk_license = True
 
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
