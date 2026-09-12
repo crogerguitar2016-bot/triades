@@ -17,7 +17,7 @@ p4a.branch = develop
 p4a.source_dir = /home/runner/p4a
 
 android.archs = arm64-v8a
-android.minapi = 23
+android.minapi = 24
 android.api = 36
 android.ndk = 29
 
