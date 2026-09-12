@@ -91,12 +91,30 @@ jobs:
           python -m pip install "cython==0.29.34"
           python -m pip install reportlab Pillow
           REPORTLAB_PATH=$(python -c "import reportlab; print(reportlab.__path__[0])")
+          PIL_PATH=$(python -c "import PIL; print(PIL.__path__[0])")
+
           rm -rf ./reportlab
+          rm -rf ./PIL
+
           cp -r "$REPORTLAB_PATH" ./reportlab
+          cp -r "$PIL_PATH" ./PIL
+
+          # O PDF atual usa apenas o canvas/texto do ReportLab.
+          # Removemos extensões nativas do Pillow para evitar
+          # carregar binários Linux incompatíveis com Android.
+          find ./PIL -type f -name "*.so" -delete
+          find ./PIL -type f -name "*.pyd" -delete
+
+          # Também removemos extensões nativas eventualmente
+          # presentes no pacote ReportLab copiado.
           find ./reportlab -type f -name "*.so" -delete
           find ./reportlab -type f -name "*.pyd" -delete
+
           echo "ReportLab copiado para o projeto:"
           ls -ld ./reportlab
+
+          echo "PIL/Pillow copiado para o projeto:"
+          ls -ld ./PIL
 
       - name: Instalar Buildozer
         run: |
