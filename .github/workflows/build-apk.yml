@@ -55,9 +55,11 @@ jobs:
         run: |
           mkdir -p "$HOME/android-sdk/tools/bin"
 
-          ln -sf "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" "$HOME/android-sdk/tools/bin/sdkmanager"
+          ln -sf "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" \
+            "$HOME/android-sdk/tools/bin/sdkmanager"
 
-          ln -sf "$HOME/android-sdk/cmdline-tools/latest/bin/avdmanager" "$HOME/android-sdk/tools/bin/avdmanager"
+          ln -sf "$HOME/android-sdk/cmdline-tools/latest/bin/avdmanager" \
+            "$HOME/android-sdk/tools/bin/avdmanager"
 
           echo "Verificando sdkmanager:"
           ls -l "$HOME/android-sdk/tools/bin/sdkmanager"
@@ -82,21 +84,45 @@ jobs:
           curl https://sh.rust.rs -sSf | sh -s -- -y
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - name: Instalar Python-for-Android e dependências
+      - name: Instalar dependências Python
         run: |
           python -m pip install --upgrade pip setuptools
           python -m pip install legacy-cgi
           python -m pip install "cython==0.29.34"
-          python -m pip install git+https://github.com/kivy/python-for-android.git
-          python -m pip install git+https://github.com/kivy/buildozer.git
           python -m pip install reportlab Pillow
 
-      - name: Remover recipe antigo do ReportLab
+      - name: Instalar Buildozer
         run: |
-          P4A_DIR=$(python -c "import pythonforandroid, os; print(os.path.dirname(pythonforandroid.__file__))")
-          echo "Python-for-Android em: $P4A_DIR"
-          rm -rf "$P4A_DIR/recipes/reportlab"
-          echo "Recipe antigo do ReportLab removido."
+          python -m pip install git+https://github.com/kivy/buildozer.git
+
+      - name: Preparar Python-for-Android
+        run: |
+          rm -rf "$HOME/p4a"
+          git clone --depth 1 https://github.com/kivy/python-for-android.git "$HOME/p4a"
+
+          echo "Python-for-Android:"
+          ls -la "$HOME/p4a"
+
+          echo "Removendo receita problemática do ReportLab..."
+          rm -rf "$HOME/p4a/pythonforandroid/recipes/reportlab"
+
+          echo "Verificando remoção:"
+          if [ -d "$HOME/p4a/pythonforandroid/recipes/reportlab" ]; then
+            echo "ERRO: receita ReportLab ainda existe"
+            exit 1
+          else
+            echo "OK: receita ReportLab removida"
+          fi
+
+      - name: Configurar Buildozer para usar P4A preparado
+        run: |
+          cat >> buildozer.spec <<'SPEC'
+
+          p4a.source_dir = /home/runner/p4a
+          SPEC
+
+          echo "Configuração final:"
+          cat buildozer.spec
 
       - name: Limpar build anterior
         run: |
