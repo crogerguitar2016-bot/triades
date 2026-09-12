@@ -90,6 +90,13 @@ jobs:
           python -m pip install legacy-cgi
           python -m pip install "cython==0.29.34"
           python -m pip install reportlab Pillow
+          REPORTLAB_PATH=$(python -c "import reportlab; print(reportlab.__path__[0])")
+          rm -rf ./reportlab
+          cp -r "$REPORTLAB_PATH" ./reportlab
+          find ./reportlab -type f -name "*.so" -delete
+          find ./reportlab -type f -name "*.pyd" -delete
+          echo "ReportLab copiado para o projeto:"
+          ls -ld ./reportlab
 
       - name: Instalar Buildozer
         run: |
@@ -103,16 +110,6 @@ jobs:
           echo "Python-for-Android:"
           ls -la "$HOME/p4a"
 
-          echo "Removendo receita problemática do ReportLab..."
-          rm -rf "$HOME/p4a/pythonforandroid/recipes/reportlab"
-
-          echo "Verificando remoção:"
-          if [ -d "$HOME/p4a/pythonforandroid/recipes/reportlab" ]; then
-            echo "ERRO: receita ReportLab ainda existe"
-            exit 1
-          else
-            echo "OK: receita ReportLab removida"
-          fi
 
       - name: Configurar Buildozer para usar P4A preparado
         run: |
