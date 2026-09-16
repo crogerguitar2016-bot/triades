@@ -7,13 +7,13 @@ package.domain = com.croger
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,otf
 
-requirements = python3,kivy
+requirements = python3==3.12.10,kivy
 
 version = 1.0
 orientation = portrait
 fullscreen = 0
 
-p4a.branch = develop
+p4a.branch = master
 
 android.archs = arm64-v8a
 android.minapi = 24
