@@ -1,0 +1,24 @@
+--- a/configure
++++ b/configure
+@@ -17785,6 +17785,12 @@
+   printf "%s\n" "#define HAVE_GETGRGID_R 1" >>confdefs.h
+ 
+ fi
++ac_fn_c_check_func "$LINENO" "getgrent" "ac_cv_func_getgrent"
++if test "x$ac_cv_func_getgrent" = xyes
++then :
++  printf "%s\n" "#define HAVE_GETGRENT 1" >>confdefs.h
++
++fi
+ ac_fn_c_check_func "$LINENO" "getgrnam_r" "ac_cv_func_getgrnam_r"
+ if test "x$ac_cv_func_getgrnam_r" = xyes
+ then :
+@@ -29491,7 +29497,7 @@
+ 
+     if true
+ then :
+-  if test "$ac_cv_func_getgrgid" = yes -o "$ac_cv_func_getgrgid_r" = yes
++  if test "$ac_cv_func_getgrgid" = yes -o "$ac_cv_func_getgrgid_r" = yes -o "$ac_cv_func_getgrent" = yes
+ then :
+   py_cv_module_grp=yes
+ else $as_nop

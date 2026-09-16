@@ -125,10 +125,39 @@ jobs:
           rm -rf "$HOME/p4a"
           git clone --depth 1 --branch master https://github.com/kivy/python-for-android.git "$HOME/p4a"
 
-          echo "Python-for-Android:"
-          ls -la "$HOME/p4a"
+          echo "Instalando patches do TRIADES..."
 
+          cp patches/python3/triades-grp-configure-ac-p1.patch "$HOME/p4a/pythonforandroid/recipes/python3/patches/"
+          cp patches/python3/triades-grp-configure-p1.patch "$HOME/p4a/pythonforandroid/recipes/python3/patches/"
 
+          python - <<'PY2'
+          from pathlib import Path
+
+          p = Path.home() / "p4a/pythonforandroid/recipes/python3/__init__.py"
+          text = p.read_text()
+
+          marker = "        'patches/reproducible-buildinfo.diff',\n"
+          additions = (
+              "        'patches/triades-grp-configure-ac-p1.patch',\n"
+              "        'patches/triades-grp-configure-p1.patch',\n"
+          )
+
+          if additions not in text:
+              if marker not in text:
+                  raise SystemExit("ERRO: marcador da receita Python3 não encontrado.")
+              text = text.replace(marker, marker + additions, 1)
+              p.write_text(text)
+
+          print("Patches registrados na receita Python3.")
+          PY2
+
+          echo "Verificando patches:"
+          ls -l "$HOME/p4a/pythonforandroid/recipes/python3/patches/triades-grp-"*
+
+          echo "Verificando receita Python3:"
+          sed -n '60,75p' "$HOME/p4a/pythonforandroid/recipes/python3/__init__.py"
+
+          echo "Python-for-Android preparado."
       - name: Configurar Buildozer para usar P4A preparado
         run: |
           cat >> buildozer.spec <<'SPEC'
