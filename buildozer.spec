@@ -7,7 +7,7 @@ package.domain = com.croger
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,otf
 
-requirements = python3==3.12.10,kivy
+requirements = python3==3.12.10,hostpython3==3.12.10,kivy
 
 version = 1.0
 orientation = portrait
