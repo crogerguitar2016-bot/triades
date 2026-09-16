@@ -1,6 +1,6 @@
 [app]
 
-title = TRIADES
+title = Harmonia Funcional Avançada
 package.name = triades
 package.domain = com.croger
 
