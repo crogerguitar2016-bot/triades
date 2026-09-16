@@ -1,357 +1,1120 @@
-from itertools import product
+# ============================================================
+# BLOCO 1 DE 7
+# CONFIGURAÇÕES E COLUNAS DE ACORDES
+# ============================================================
+
 import os
-from datetime import datetime
+import threading
+
+from itertools import product, permutations
+
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.metrics import dp
+
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-from kivy.uix.spinner import Spinner
-from kivy.uix.scrollview import ScrollView
 from kivy.uix.popup import Popup
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.spinner import Spinner
+from kivy.uix.textinput import TextInput
 
 
 # ============================================================
-# TRIADES
-# PROFESSOR: CARLOS ROGÉRIO
-# C ROGER
-# Ensaio Avançado de Harmonia
+# CONFIGURAÇÕES
 # ============================================================
 
+PASTA_DOWNLOAD = os.path.join(
+    "/storage/emulated/0",
+    "Download"
+)
 
-CAMPOS_HARMONICOS = {
-    "C": {
-        "C": ["C", "E", "G"],
-        "Dm": ["D", "F", "A"],
-        "Em": ["E", "G", "B"],
-        "F": ["F", "A", "C"],
-        "G": ["G", "B", "D"],
-        "Am": ["A", "C", "E"],
-        "B°": ["B", "D", "F"],
-    },
-    "G": {
-        "G": ["G", "B", "D"],
-        "Am": ["A", "C", "E"],
-        "Bm": ["B", "D", "F#"],
-        "C": ["C", "E", "G"],
-        "D": ["D", "F#", "A"],
-        "Em": ["E", "G", "B"],
-        "F#°": ["F#", "A", "C"],
-    },
-    "D": {
-        "D": ["D", "F#", "A"],
-        "Em": ["E", "G", "B"],
-        "F#m": ["F#", "A", "C#"],
-        "G": ["G", "B", "D"],
-        "A": ["A", "C#", "E"],
-        "Bm": ["B", "D", "F#"],
-        "C#°": ["C#", "E", "G"],
-    },
-    "A": {
-        "A": ["A", "C#", "E"],
-        "Bm": ["B", "D", "F#"],
-        "C#m": ["C#", "E", "G#"],
-        "D": ["D", "F#", "A"],
-        "E": ["E", "G#", "B"],
-        "F#m": ["F#", "A", "C#"],
-        "G#°": ["G#", "B", "D"],
-    },
-    "E": {
-        "E": ["E", "G#", "B"],
-        "F#m": ["F#", "A", "C#"],
-        "G#m": ["G#", "B", "D#"],
-        "A": ["A", "C#", "E"],
-        "B": ["B", "D#", "F#"],
-        "C#m": ["C#", "E", "G#"],
-        "D#°": ["D#", "F#", "A"],
-    },
-    "B": {
-        "B": ["B", "D#", "F#"],
-        "C#m": ["C#", "E", "G#"],
-        "D#m": ["D#", "F#", "A#"],
-        "E": ["E", "G#", "B"],
-        "F#": ["F#", "A#", "C#"],
-        "G#m": ["G#", "B", "D#"],
-        "A#°": ["A#", "C#", "E"],
-    },
-    "F#": {
-        "F#": ["F#", "A#", "C#"],
-        "G#m": ["G#", "B", "D#"],
-        "A#m": ["A#", "C#", "E#"],
-        "B": ["B", "D#", "F#"],
-        "C#": ["C#", "E#", "G#"],
-        "D#m": ["D#", "F#", "A#"],
-        "E#°": ["E#", "G#", "B"],
-    },
-    "F": {
-        "F": ["F", "A", "C"],
-        "Gm": ["G", "Bb", "D"],
-        "Am": ["A", "C", "E"],
-        "Bb": ["Bb", "D", "F"],
-        "C": ["C", "E", "G"],
-        "Dm": ["D", "F", "A"],
-        "E°": ["E", "G", "Bb"],
-    },
-    "Bb": {
-        "Bb": ["Bb", "D", "F"],
-        "Cm": ["C", "Eb", "G"],
-        "Dm": ["D", "F", "A"],
-        "Eb": ["Eb", "G", "Bb"],
-        "F": ["F", "A", "C"],
-        "Gm": ["G", "Bb", "D"],
-        "A°": ["A", "C", "Eb"],
-    },
-    "Eb": {
-        "Eb": ["Eb", "G", "Bb"],
-        "Fm": ["F", "Ab", "C"],
-        "Gm": ["G", "Bb", "D"],
-        "Ab": ["Ab", "C", "Eb"],
-        "Bb": ["Bb", "D", "F"],
-        "Cm": ["C", "Eb", "G"],
-        "D°": ["D", "F", "Ab"],
-    },
-    "Ab": {
-        "Ab": ["Ab", "C", "Eb"],
-        "Bbm": ["Bb", "Db", "F"],
-        "Cm": ["C", "Eb", "G"],
-        "Db": ["Db", "F", "Ab"],
-        "Eb": ["Eb", "G", "Bb"],
-        "Fm": ["F", "Ab", "C"],
-        "G°": ["G", "Bb", "Db"],
-    },
-    "Db": {
-        "Db": ["Db", "F", "Ab"],
-        "Ebm": ["Eb", "Gb", "Bb"],
-        "Fm": ["F", "Ab", "C"],
-        "Gb": ["Gb", "Bb", "Db"],
-        "Ab": ["Ab", "C", "Eb"],
-        "Bbm": ["Bb", "Db", "F"],
-        "C°": ["C", "Eb", "Gb"],
-    },
+PASTA_DESTINO = os.path.join(
+    PASTA_DOWNLOAD,
+    "Harmonia Ensaio de Harmonia Avançada"
+)
+
+NOME_BASE = "combinacoes_acordes"
+
+LIMITE_COMBINACOES_POR_PDF = 1_000_000
+
+LIMITE_ALERTA_COMBINACOES = 10_000_000
+
+
+# ============================================================
+# COLUNAS DE ACORDES
+# ============================================================
+
+colunas = {
+
+    "do": [
+        "C",
+        "C7+",
+        "C7+9",
+        "C7+9 11",
+        "C7+9 11 13",
+        "Am",
+        "Am7",
+        "Am7 9",
+        "Am7 9 11",
+        "Am7 9 11 13",
+        "F",
+        "F7+",
+        "F7+9",
+        "F7+9 11aum",
+        "F7+9 11aum 13",
+        "Dm7",
+        "Dm7 9",
+        "Dm7 9 11",
+        "Dm7 9 11 13",
+        "B°7 9",
+        "B°7 9 11",
+        "B°7 9 11 13",
+        "G7 9 11",
+        "G7 9 11 13",
+        "Em7 9 11 13",
+    ],
+
+    "re": [
+        "Dm",
+        "Dm7",
+        "Dm7 9",
+        "Dm7 9 11",
+        "Dm7 9 11 13",
+        "B°",
+        "B°7",
+        "B°7 9",
+        "B°7 9 11",
+        "B°7 9 11 13",
+        "G",
+        "G7",
+        "G7 9",
+        "G7 9 11",
+        "G7 9 11 13",
+        "Em7",
+        "Em7 9",
+        "Em7 9 11",
+        "Em7 9 11 13",
+        "C7+9",
+        "C7+9 11",
+        "C7+9 11 13",
+        "Am7 9 11",
+        "Am7 9 11 13",
+        "F7+9 11aum 13",
+    ],
+
+    "mi": [
+        "Em",
+        "Em7",
+        "Em7 9",
+        "Em7 9 11",
+        "Em7 9 11 13",
+        "C",
+        "C7+",
+        "C7+9",
+        "C7+9 11",
+        "C7+9 11 13",
+        "Am",
+        "Am7",
+        "Am7 9",
+        "Am7 9 11",
+        "Am7 9 11 13",
+        "F7+",
+        "F7+9",
+        "F7+9 11aum",
+        "F7+9 11aum 13",
+        "Dm7 9",
+        "Dm7 9 11",
+        "Dm7 9 11 13",
+        "B°7 9 11",
+        "B°7 9 11 13",
+        "G7 9 11 13",
+    ],
+
+    "fa": [
+        "F",
+        "F7+",
+        "F7+9",
+        "F7+9 11",
+        "F7+9 11 13",
+        "Dm",
+        "Dm7",
+        "Dm7 9",
+        "Dm7 9 11",
+        "Dm7 9 11 13",
+        "B°",
+        "B°7",
+        "B°7 9",
+        "B°7 9 11",
+        "B°7 9 11 13",
+        "G7",
+        "G7 9",
+        "G7 9 11",
+        "G7 9 11 13",
+        "Em7 9",
+        "Em7 9 11",
+        "Em7 9 11 13",
+        "C7+9 11",
+        "C7+9 11 13",
+        "Am7 9 11 13",
+    ],
+
+    "sol": [
+        "G",
+        "G7",
+        "G7 9",
+        "G7 9 11",
+        "G7 9 11 13",
+        "Em",
+        "Em7",
+        "Em7 9",
+        "Em7 9 11",
+        "Em7 9 11 13",
+        "C",
+        "C7+",
+        "C7+9",
+        "C7+9 11",
+        "C7+9 11 13",
+        "Am7",
+        "Am7 9",
+        "Am7 9 11",
+        "Am7 9 11 13",
+        "F7+9",
+        "F7+9 11",
+        "F7+9 11 13",
+        "Dm7 9 11",
+        "Dm7 9 11 13",
+        "B°7 9 11 13",
+    ],# ============================================================
+# BLOCO 2 DE 7
+# CONTINUAÇÃO DAS COLUNAS E FUNÇÕES MUSICAIS
+# ============================================================
+
+    "la": [
+        "Am",
+        "Am7",
+        "Am7 9",
+        "Am7 9 11",
+        "Am7 9 11 13",
+        "F",
+        "F7+",
+        "F7+9",
+        "F7+9 11",
+        "F7+9 11 13",
+        "Dm",
+        "Dm7",
+        "Dm7 9",
+        "Dm7 9 11",
+        "Dm7 9 11 13",
+        "B°7",
+        "B°7 9",
+        "B°7 9 11",
+        "B°7 9 11 13",
+        "G7 9",
+        "G7 9 11",
+        "G7 9 11 13",
+        "Em7 9 11",
+        "Em7 9 11 13",
+        "C7+ 9 11 13",
+    ],
+
+    "si": [
+        "B°",
+        "B°7",
+        "B°7 9",
+        "B°7 9 11",
+        "B°7 9 11 13",
+        "G",
+        "G7",
+        "G7 9",
+        "G7 9 11",
+        "G7 9 11 13",
+        "Em",
+        "Em7",
+        "Em7 9",
+        "Em7 9 11",
+        "Em7 9 11 13",
+        "C7+",
+        "C7+9",
+        "C7+9 11",
+        "C7+9 11 13",
+        "Am7 9",
+        "Am7 9 11",
+        "Am7 9 11 13",
+        "F7+9 11",
+        "F7+9 11 13",
+        "Dm7 9 11 13",
+    ],
 }
 
 
-ACORDES_AUMENTADOS = {
-    "C+": ["C", "E", "G#"],
-    "C#+": ["C#", "F", "A"],
-    "D+": ["D", "F#", "A#"],
-    "D#+": ["D#", "G", "B"],
-    "E+": ["E", "G#", "B#"],
-    "F+": ["F", "A", "C#"],
-    "F#+": ["F#", "A#", "D"],
-    "G+": ["G", "B", "D#"],
-    "G#+": ["G#", "C", "E"],
-    "A+": ["A", "C#", "F"],
-    "A#+": ["A#", "D", "F#"],
-    "B+": ["B", "D#", "G"],
-    "Fb+": ["Fb", "Ab", "C"],
-}
+# ============================================================
+# NORMALIZAR NOTA
+# ============================================================
+
+def normalizar_nota(nota):
+
+    nota = nota.strip().lower()
+
+    equivalencias = {
+        "c": "do",
+        "do": "do",
+        "d": "re",
+        "re": "re",
+        "e": "mi",
+        "mi": "mi",
+        "f": "fa",
+        "fa": "fa",
+        "g": "sol",
+        "sol": "sol",
+        "a": "la",
+        "la": "la",
+        "b": "si",
+        "si": "si",
+    }
+
+    return equivalencias.get(
+        nota,
+        ""
+    )
 
 
-def normalize_note_input(text):
-    text = text.strip()
-    text = text.replace("♯", "#")
-    text = text.replace("♭", "b")
+# ============================================================
+# QUANTIDADE DE VOZES
+# ============================================================
 
-    if not text:
-        return ""
+def quantidade_de_vozes(acorde):
 
-    if len(text) == 1:
-        return text.upper()
+    texto = acorde.strip()
 
-    return text[0].upper() + text[1:]
+    # 7 VOZES
+    if (
+        "9 11 13" in texto
+        or "9 11aum 13" in texto
+    ):
+        return 7
 
+    # 6 VOZES
+    if (
+        "9 11" in texto
+        or "9 11aum" in texto
+    ):
+        return 6
 
-def obter_colunas(notas, campo_escolhido):
-    colunas = []
+    # 5 VOZES
+    if "9" in texto:
+        return 5
 
-    if campo_escolhido == "ATONAL":
+    # 4 VOZES
+    if "7+" in texto or "7" in texto:
+        return 4
 
-        todos_acordes = []
-
-        for campo in CAMPOS_HARMONICOS.values():
-            for acorde, notas_acorde in campo.items():
-                item = (acorde, notas_acorde)
-
-                if item not in todos_acordes:
-                    todos_acordes.append(item)
-
-        for acorde, notas_acorde in ACORDES_AUMENTADOS.items():
-            item = (acorde, notas_acorde)
-
-            if item not in todos_acordes:
-                todos_acordes.append(item)
-
-        for nota in notas:
-            coluna = []
-
-            for acorde, notas_acorde in todos_acordes:
-                if nota in notas_acorde and acorde not in coluna:
-                    coluna.append(acorde)
-
-            colunas.append(coluna)
-
-    else:
-
-        campo = CAMPOS_HARMONICOS.get(campo_escolhido)
-
-        if not campo:
-            return []
-
-        for nota in notas:
-
-            raizes = []
-            terceiras = []
-            quintas = []
-
-            for acorde, notas_acorde in campo.items():
-
-                if len(notas_acorde) >= 1 and nota == notas_acorde[0]:
-                    raizes.append(acorde)
-
-                elif len(notas_acorde) >= 2 and nota == notas_acorde[1]:
-                    terceiras.append(acorde)
-
-                elif len(notas_acorde) >= 3 and nota == notas_acorde[2]:
-                    quintas.append(acorde)
-
-            coluna = []
-
-            for lista in (raizes, terceiras, quintas):
-                for acorde in lista:
-                    if acorde not in coluna:
-                        coluna.append(acorde)
-
-            colunas.append(coluna)
-
-    return colunas
+    # 3 VOZES
+    return 3
 
 
-def gerar_pdf(caminho, campo, notas, colunas, combinacoes):
+# ============================================================
+# OBTER COLUNA
+# ============================================================
 
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.pdfgen import canvas
-    except Exception as erro:
-        raise RuntimeError(
-            "O módulo ReportLab ainda não está disponível no APK.\n\n"
-            "A interface está funcionando, mas o PDF será habilitado "
-            "quando corrigirmos o empacotamento do ReportLab.\n\n"
-            f"Detalhe: {erro}"
+def obter_coluna(nota):
+
+    return colunas.get(
+        nota.lower(),
+        []
+    )
+
+
+# ============================================================
+# PREPARAR COLUNAS
+# ============================================================
+
+def preparar_colunas(
+    notas,
+    vozes
+):
+
+    resultado = []
+
+    for nota in notas:
+
+        coluna = obter_coluna(
+            nota
         )
 
-    c = canvas.Canvas(caminho, pagesize=A4)
+        filtrada = [
+            acorde
+            for acorde in coluna
+            if quantidade_de_vozes(acorde)
+            == vozes
+        ]
+
+        resultado.append(
+            filtrada
+        )
+
+    return resultado
+
+
+# ============================================================
+# PREPARAR TODAS AS COLUNAS
+# ============================================================
+
+def preparar_colunas_todas(
+    notas
+):
+
+    resultado = []
+
+    for nota in notas:
+
+        resultado.append(
+            obter_coluna(nota)
+        )
+
+    return resultado
+
+
+# ============================================================
+# GERADOR NORMAL
+# ============================================================
+
+def gerar_combinacoes_normais(
+    colunas,
+    tamanho
+):
+
+    colunas_usadas = colunas[:tamanho]
+
+    yield from product(
+        *colunas_usadas
+    )
+
+
+# ============================================================
+# GERADOR FATORIAL
+# ============================================================
+
+def gerar_combinacoes_fatoriais(
+    colunas,
+    tamanho
+):
+
+    colunas_usadas = colunas[:tamanho]
+
+    for ordem in permutations(
+        range(tamanho)
+    ):
+
+        colunas_ordenadas = [
+            colunas_usadas[i]
+            for i in ordem
+        ]
+
+        for combinacao in product(
+            *colunas_ordenadas
+        ):
+
+            yield combinacao
+
+
+# ============================================================
+# TOTAL NORMAL
+# ============================================================
+
+def calcular_total_normal(
+    colunas,
+    tamanho
+):
+
+    total = 1
+
+    for coluna in colunas[:tamanho]:
+
+        total *= len(
+            coluna
+        )
+
+    return total
+
+
+# ============================================================
+# TOTAL FATORIAL
+# ============================================================
+
+def calcular_total_fatorial(
+    colunas,
+    tamanho
+):
+
+    total_normal = calcular_total_normal(
+        colunas,
+        tamanho
+    )
+
+    fatorial = 1
+
+    for numero in range(
+        2,
+        tamanho + 1
+    ):
+
+        fatorial *= numero
+
+    return total_normal * fatorial
+
+
+# ============================================================
+# FORMATAR NÚMERO
+# ============================================================
+
+def formatar_numero(
+    numero
+):
+
+    return f"{numero:,}".replace(
+        ",",
+        "."
+    )# ============================================================
+# BLOCO 3 DE 7
+# FUNÇÕES DE TEXTO, CABEÇALHO E PDF
+# ============================================================
+
+def quebrar_texto(
+    texto,
+    largura_maxima,
+    fonte="Helvetica",
+    tamanho=9
+):
+
+    palavras = texto.split()
+
+    linhas = []
+
+    linha_atual = ""
+
+    for palavra in palavras:
+
+        tentativa = (
+            palavra
+            if not linha_atual
+            else linha_atual + " " + palavra
+        )
+
+        if stringWidth(
+            tentativa,
+            fonte,
+            tamanho
+        ) <= largura_maxima:
+
+            linha_atual = tentativa
+
+        else:
+
+            if linha_atual:
+
+                linhas.append(
+                    linha_atual
+                )
+
+            linha_atual = palavra
+
+    if linha_atual:
+
+        linhas.append(
+            linha_atual
+        )
+
+    return linhas
+
+
+# ============================================================
+# PRÓXIMO NÚMERO DISPONÍVEL
+# ============================================================
+
+def proximo_numero_disponivel(
+    sufixo=""
+):
+
+    numero = 1
+
+    while True:
+
+        nome = (
+            f"{NOME_BASE}"
+            f"{sufixo}_"
+            f"{numero:04d}.pdf"
+        )
+
+        caminho = os.path.join(
+            PASTA_DESTINO,
+            nome
+        )
+
+        if not os.path.exists(
+            caminho
+        ):
+
+            return numero
+
+        numero += 1
+
+
+# ============================================================
+# NOME DE PDF DISPONÍVEL
+# ============================================================
+
+def nome_pdf_disponivel(
+    numero,
+    sufixo=""
+):
+
+    while True:
+
+        nome = (
+            f"{NOME_BASE}"
+            f"{sufixo}_"
+            f"{numero:04d}.pdf"
+        )
+
+        caminho = os.path.join(
+            PASTA_DESTINO,
+            nome
+        )
+
+        if not os.path.exists(
+            caminho
+        ):
+
+            return caminho
+
+        numero += 1
+
+
+# ============================================================
+# CABEÇALHO DINÂMICO
+# ============================================================
+
+def escrever_cabecalho_pdf(
+    c,
+    notas,
+    tamanho,
+    vozes,
+    modo_fatorial,
+    colunas_pdf,
+    total
+):
 
     largura, altura = A4
 
-    y = altura - 50
+    margem = 35
 
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y, "PROFESSOR: CARLOS ROGÉRIO")
+    y = altura - 40
 
-    y -= 22
+    # --------------------------------------------------------
+    # TÍTULO
+    # --------------------------------------------------------
 
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "C ROGER")
+    c.setFont(
+        "Helvetica-Bold",
+        14
+    )
 
-    y -= 22
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Ensaio Avançado de Harmonia")
-
-    y -= 35
-
-    c.setFont("Helvetica", 11)
-    c.drawString(50, y, f"Campo Harmônico: {campo}")
-
-    y -= 18
-
-    texto_notas = ", ".join(notas)
-
-    c.drawString(50, y, f"Notas digitadas: {texto_notas}")
-
-    y -= 28
-
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(50, y, "Notas e acordes encontrados:")
+    c.drawCentredString(
+        largura / 2,
+        y,
+        "ENSAIO AVANÇADO DE HARMONIA"
+    )
 
     y -= 20
 
-    c.setFont("Helvetica", 9)
+    c.setFont(
+        "Helvetica-Bold",
+        11
+    )
 
-    for indice, nota in enumerate(notas, start=1):
+    c.drawCentredString(
+        largura / 2,
+        y,
+        "GERADOR DE COMBINAÇÕES DE ACORDES"
+    )
 
-        coluna = colunas[indice - 1]
+    y -= 19
 
-        linha = f"Col {indice} ({nota}): " + " | ".join(coluna)
+    c.setFont(
+        "Helvetica-Bold",
+        10
+    )
 
-        # Quebra simples para linhas muito grandes
-        partes = []
+    c.drawCentredString(
+        largura / 2,
+        y,
+        "AUTOR DO APK: C ROGER"
+    )
 
-        while len(linha) > 95:
-            corte = linha.rfind(" | ", 0, 95)
+    y -= 24
 
-            if corte <= 0:
-                corte = 95
+    # --------------------------------------------------------
+    # DADOS DA GERAÇÃO
+    # --------------------------------------------------------
 
-            partes.append(linha[:corte])
-            linha = linha[corte:]
+    c.setFont(
+        "Helvetica",
+        9
+    )
 
-            if linha.startswith(" | "):
-                linha = linha[3:]
+    notas_texto = ", ".join(
+        nota.upper()
+        for nota in notas
+    )
 
-        partes.append(linha)
+    c.drawString(
+        margem,
+        y,
+        f"Notas utilizadas: {notas_texto}"
+    )
 
-        for parte in partes:
+    y -= 14
 
-            c.drawString(50, y, parte)
+    c.drawString(
+        margem,
+        y,
+        (
+            "Quantidade de notas utilizadas: "
+            f"{len(notas)}"
+        )
+    )
 
-            y -= 13
+    y -= 14
 
-            if y < 60:
-                c.showPage()
-                c.setFont("Helvetica", 9)
-                y = altura - 50
+    c.drawString(
+        margem,
+        y,
+        f"Tamanho da combinação: {tamanho}"
+    )
 
-    y -= 10
+    y -= 14
 
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(50, y, "Combinações:")
+    if vozes is None:
 
-    y -= 18
+        tipo_texto = (
+            "TODOS OS ACORDES"
+        )
 
-    c.setFont("Helvetica", 9)
+    else:
 
-    for indice, combinacao in enumerate(combinacoes, start=1):
+        nomes_vozes = {
+            3: "TRÍADES (3 VOZES)",
+            4: "TÉTRADES (4 VOZES)",
+            5: "5 VOZES",
+            6: "6 VOZES",
+            7: "7 VOZES",
+        }
 
-        linha = f"{indice}. {' - '.join(combinacao)}"
+        tipo_texto = nomes_vozes.get(
+            vozes,
+            f"{vozes} VOZES"
+        )
 
-        c.drawString(50, y, linha)
+    c.drawString(
+        margem,
+        y,
+        f"Tipo de acorde: {tipo_texto}"
+    )
+
+    y -= 14
+
+    if modo_fatorial:
+
+        c.drawString(
+            margem,
+            y,
+            "Modo de geração: FATORIAL"
+        )
+
+        y -= 14
+
+    c.setFont(
+        "Helvetica-Bold",
+        9
+    )
+
+    c.drawString(
+        margem,
+        y,
+        (
+            "Total de combinações: "
+            f"{formatar_numero(total)}"
+        )
+    )
+
+    y -= 22
+
+    # --------------------------------------------------------
+    # ACORDES DISPONÍVEIS
+    # --------------------------------------------------------
+
+    c.setFont(
+        "Helvetica-Bold",
+        10
+    )
+
+    c.drawString(
+        margem,
+        y,
+        "ACORDES DISPONÍVEIS POR NOTA:"
+    )
+
+    y -= 17
+
+    for indice, nota in enumerate(
+        notas
+    ):
+
+        acordes = colunas_pdf[
+            indice
+        ]
+
+        c.setFont(
+            "Helvetica-Bold",
+            8
+        )
+
+        c.drawString(
+            margem,
+            y,
+            (
+                f"{nota.upper()} = "
+                f"{len(acordes)} acordes"
+            )
+        )
 
         y -= 13
 
-        if y < 60:
+        c.setFont(
+            "Helvetica",
+            8
+        )
 
-            c.showPage()
+        for numero, acorde in enumerate(
+            acordes,
+            1
+        ):
 
-            c.setFont("Helvetica", 9)
+            texto = (
+                f"{numero}. {acorde}"
+            )
 
-            y = altura - 50
+            linhas = quebrar_texto(
+                texto,
+                largura - (margem * 2),
+                "Helvetica",
+                8
+            )
 
-    c.save()
+            for linha in linhas:
 
+                if y < 45:
+
+                    c.showPage()
+
+                    y = altura - 40
+
+                    c.setFont(
+                        "Helvetica",
+                        8
+                    )
+
+                c.drawString(
+                    margem,
+                    y,
+                    linha
+                )
+
+                y -= 11
+
+        y -= 5
+
+    return y
+
+
+# ============================================================
+# ESCREVER COMBINAÇÕES
+# ============================================================
+
+def escrever_combinacoes_pdf(
+    c,
+    gerador,
+    quantidade,
+    numero_pdf,
+    callback=None
+):
+
+    largura, altura = A4
+
+    margem = 35
+
+    y = altura - 40
+
+    tamanho_fonte = 8
+
+    espacamento = 11
+
+    largura_disponivel = (
+        largura
+        - (margem * 2)
+    )
+
+    c.setFont(
+        "Helvetica",
+        tamanho_fonte
+    )
+
+    contador_local = 0
+
+    while (
+        contador_local
+        < quantidade
+    ):
+
+        combinacao = next(
+            gerador
+        )
+
+        contador_local += 1
+
+        texto = " | ".join(
+            combinacao
+        )
+
+        linhas = quebrar_texto(
+            texto,
+            largura_disponivel,
+            "Helvetica",
+            tamanho_fonte
+        )
+
+        for linha in linhas:
+
+            if y < 40:
+
+                c.showPage()
+
+                y = altura - 40
+
+                c.setFont(
+                    "Helvetica",
+                    tamanho_fonte
+                )
+
+            c.drawString(
+                margem,
+                y,
+                linha
+            )
+
+            y -= espacamento
+
+        if (
+            contador_local % 50_000 == 0
+            or contador_local == quantidade
+        ):
+
+            if callback:
+
+                callback(
+                    (
+                        f"PDF {numero_pdf}: "
+                        f"{formatar_numero(contador_local)} "
+                        "combinações escritas..."
+                    )
+                )
+
+    return contador_local
+
+
+# ============================================================
+# GERAR PDFs
+# ============================================================
+
+def gerar_pdfs_intervalo(
+    colunas,
+    tamanho_combinacao,
+    total_para_pdf,
+    modo_fatorial=False,
+    callback=None,
+    notas=None,
+    vozes=None
+):
+
+    os.makedirs(
+        PASTA_DESTINO,
+        exist_ok=True
+    )
+
+    if total_para_pdf <= 0:
+
+        raise ValueError(
+            "Não existem combinações para gerar."
+        )
+
+    # --------------------------------------------------------
+    # GERADOR
+    # --------------------------------------------------------
+
+    if modo_fatorial:
+
+        gerador = gerar_combinacoes_fatoriais(
+            colunas,
+            tamanho_combinacao
+        )
+
+    else:
+
+        gerador = gerar_combinacoes_normais(
+            colunas,
+            tamanho_combinacao
+        )
+
+    # --------------------------------------------------------
+    # SUFIXO
+    # --------------------------------------------------------
+
+    sufixo = (
+        "_fatorial"
+        if modo_fatorial
+        else ""
+    )
+
+    restante = total_para_pdf
+
+    quantidade_por_pdf = (
+        LIMITE_COMBINACOES_POR_PDF
+    )
+
+    numero_pdf = (
+        proximo_numero_disponivel(
+            sufixo
+        )
+    )
+
+    # --------------------------------------------------------
+    # GERAR CADA PDF
+    # --------------------------------------------------------
+
+    while restante > 0:
+
+        quantidade = min(
+            quantidade_por_pdf,
+            restante
+        )
+
+        caminho = nome_pdf_disponivel(
+            numero_pdf,
+            sufixo
+        )
+
+        if callback:
+
+            callback(
+                f"Iniciando PDF {numero_pdf}..."
+            )
+
+        c = canvas.Canvas(
+            caminho,
+            pagesize=A4
+        )
+
+        # ----------------------------------------------------
+        # CABEÇALHO EM CADA PDF
+        # ----------------------------------------------------
+
+        escrever_cabecalho_pdf(
+            c,
+            notas,
+            tamanho_combinacao,
+            vozes,
+            modo_fatorial,
+            colunas,
+            total_para_pdf
+        )
+
+        # ----------------------------------------------------
+        # NOVA PÁGINA PARA AS COMBINAÇÕES
+        # ----------------------------------------------------
+
+        c.showPage()
+
+        escrever_combinacoes_pdf(
+            c,
+            gerador,
+            quantidade,
+            numero_pdf,
+            callback
+        )
+
+        c.save()
+
+        restante -= quantidade
+
+        if callback:
+
+            callback(
+                (
+                    f"PDF {numero_pdf} concluído: "
+                    f"{formatar_numero(quantidade)} "
+                    "combinações."
+                )
+            )
+
+        numero_pdf += 1
+
+    if callback:
+
+        callback(
+            (
+                "Todos os PDFs foram gerados.\n"
+                f"Pasta: {PASTA_DESTINO}"
+            )
+        )# ============================================================
+# BLOCO 4 DE 7
+# INTERFACE KIVY
+# ============================================================
 
 class TelaPrincipal(BoxLayout):
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        **kwargs
+    ):
+
+        super().__init__(
+            **kwargs
+        )
 
         self.orientation = "vertical"
-        self.padding = dp(12)
-        self.spacing = dp(8)
+
+        self.padding = dp(10)
+
+        self.spacing = dp(6)
+
+        self.notas = []
+
+        self.tamanho_combinacao = 0
+
+        self.vozes_selecionadas = None
+
+        self.modo_fatorial = False
+
+        self.total_combinacoes = 0
+
+        self.colunas_atuais = []
 
         # ====================================================
         # CABEÇALHO
@@ -360,162 +1123,493 @@ class TelaPrincipal(BoxLayout):
         cabecalho = BoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height=dp(105),
-            spacing=dp(2),
+            height=dp(95),
+            spacing=dp(1),
         )
 
         titulo = Label(
             text="[b]TRIADES[/b]",
             markup=True,
-            font_size="25sp",
+            font_size="24sp",
             size_hint_y=None,
-            height=dp(35),
+            height=dp(32),
         )
 
         professor = Label(
             text="[b]PROFESSOR: CARLOS ROGÉRIO[/b]",
             markup=True,
-            font_size="16sp",
+            font_size="15sp",
             size_hint_y=None,
-            height=dp(25),
+            height=dp(23),
         )
 
         croger = Label(
             text="[b]C ROGER[/b]",
             markup=True,
-            font_size="15sp",
+            font_size="14sp",
             size_hint_y=None,
-            height=dp(22),
+            height=dp(20),
         )
 
         ensaio = Label(
             text="Ensaio Avançado de Harmonia",
-            font_size="14sp",
+            font_size="13sp",
             size_hint_y=None,
-            height=dp(22),
+            height=dp(20),
         )
 
-        cabecalho.add_widget(titulo)
-        cabecalho.add_widget(professor)
-        cabecalho.add_widget(croger)
-        cabecalho.add_widget(ensaio)
+        cabecalho.add_widget(
+            titulo
+        )
 
-        self.add_widget(cabecalho)
+        cabecalho.add_widget(
+            professor
+        )
+
+        cabecalho.add_widget(
+            croger
+        )
+
+        cabecalho.add_widget(
+            ensaio
+        )
+
+        self.add_widget(
+            cabecalho
+        )
 
         # ====================================================
-        # ÁREA DE ENTRADA
+        # ENTRADA DAS NOTAS
         # ====================================================
-
-        entrada = GridLayout(
-            cols=1,
-            size_hint_y=None,
-            height=dp(150),
-            spacing=dp(6),
-        )
-
-        entrada.add_widget(
-            Label(
-                text="Digite as notas separadas por vírgula:",
-                halign="left",
-                text_size=(None, None),
-                size_hint_y=None,
-                height=dp(25),
-            )
-        )
 
         self.notas_input = TextInput(
-            hint_text="Ex.: C, E, G ou C, F#, Bb",
+            hint_text=(
+                "Digite as notas separadas por espaços: "
+                "do re mi fa sol"
+            ),
             multiline=False,
             size_hint_y=None,
             height=dp(45),
-            font_size="17sp",
+            font_size="16sp",
         )
 
-        entrada.add_widget(self.notas_input)
+        self.add_widget(
+            self.notas_input
+        )
 
-        entrada.add_widget(
-            Label(
-                text="Escolha o Campo Harmônico:",
-                halign="left",
-                size_hint_y=None,
-                height=dp(25),
+        # ====================================================
+        # QUANTIDADE DE NOTAS
+        # ====================================================
+
+        linha_k = BoxLayout(
+            size_hint_y=None,
+            height=dp(42),
+            spacing=dp(6),
+        )
+
+        label_k = Label(
+            text="Quantidade de notas:",
+            size_hint_x=0.55,
+            font_size="14sp",
+        )
+
+        self.k_spinner = Spinner(
+            text="3",
+            values=[
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+            ],
+            size_hint_x=0.45,
+            font_size="14sp",
+        )
+
+        linha_k.add_widget(
+            label_k
+        )
+
+        linha_k.add_widget(
+            self.k_spinner
+        )
+
+        self.add_widget(
+            linha_k
+        )
+
+        # ====================================================
+        # ÁREA DOS BOTÕES
+        # ====================================================
+
+        scroll_botoes = ScrollView(
+            size_hint_y=0.48,
+            do_scroll_x=False,
+        )
+
+        botoes = GridLayout(
+            cols=2,
+            spacing=dp(5),
+            padding=dp(2),
+            size_hint_y=None,
+        )
+
+        botoes.bind(
+            minimum_height=botoes.setter(
+                "height"
             )
         )
 
-        campos = list(CAMPOS_HARMONICOS.keys()) + ["ATONAL"]
-
-        self.campo_spinner = Spinner(
-            text="C",
-            values=campos,
+        titulo_normal = Label(
+            text="[b]COMBINAÇÕES NORMAIS[/b]",
+            markup=True,
+            font_size="14sp",
             size_hint_y=None,
-            height=dp(45),
+            height=dp(30),
         )
 
-        entrada.add_widget(self.campo_spinner)
+        botoes.add_widget(
+            titulo_normal
+        )
 
-        self.add_widget(entrada)
+        botoes.add_widget(
+            Label(
+                text="",
+                size_hint_y=None,
+                height=dp(30),
+            )
+        )
 
         # ====================================================
-        # BOTÕES
+        # TRÍADES
         # ====================================================
 
-        botoes = BoxLayout(
+        btn_triades = Button(
+            text="TRÍADES\n3 VOZES",
+            font_size="13sp",
             size_hint_y=None,
-            height=dp(48),
-            spacing=dp(8),
+            height=dp(55),
         )
 
-        btn_calcular = Button(
-            text="CALCULAR",
-            font_size="15sp",
+        btn_triades.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                3,
+                False
+            )
         )
 
-        btn_calcular.bind(on_release=self.calcular)
-
-        btn_limpar = Button(
-            text="LIMPAR",
-            font_size="15sp",
+        botoes.add_widget(
+            btn_triades
         )
-
-        btn_limpar.bind(on_release=self.limpar)
-
-        botoes.add_widget(btn_calcular)
-        botoes.add_widget(btn_limpar)
-
-        self.add_widget(botoes)
 
         # ====================================================
-        # BOTÃO PDF
+        # TÉTRADES
         # ====================================================
 
-        self.btn_pdf = Button(
-            text="GERAR PDF",
+        btn_tetrades = Button(
+            text="TÉTRADES\n4 VOZES",
+            font_size="13sp",
             size_hint_y=None,
-            height=dp(48),
-            font_size="15sp",
-            disabled=True,
+            height=dp(55),
         )
 
-        self.btn_pdf.bind(on_release=self.gerar_pdf)
+        btn_tetrades.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                4,
+                False
+            )
+        )
 
-        self.add_widget(self.btn_pdf)
+        botoes.add_widget(
+            btn_tetrades
+        )
 
         # ====================================================
-        # RESULTADOS
+        # 5 VOZES
         # ====================================================
 
-        scroll = ScrollView(
+        btn_5 = Button(
+            text="5 VOZES",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_5.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                5,
+                False
+            )
+        )
+
+        botoes.add_widget(
+            btn_5
+        )
+
+        # ====================================================
+        # 6 VOZES
+        # ====================================================
+
+        btn_6 = Button(
+            text="6 VOZES",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_6.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                6,
+                False
+            )
+        )
+
+        botoes.add_widget(
+            btn_6
+        )
+
+        # ====================================================
+        # 7 VOZES
+        # ====================================================
+
+        btn_7 = Button(
+            text="7 VOZES",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_7.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                7,
+                False
+            )
+        )
+
+        botoes.add_widget(
+            btn_7
+        )
+
+        # ====================================================
+        # TODOS
+        # ====================================================
+
+        btn_todos = Button(
+            text="TODOS OS\nACORDES",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_todos.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                None,
+                False
+            )
+        )
+
+        botoes.add_widget(
+            btn_todos
+        )
+
+        # ====================================================
+        # TÍTULO FATORIAL
+        # ====================================================
+
+        titulo_fatorial = Label(
+            text="[b]COMBINAÇÕES FATORIAIS[/b]",
+            markup=True,
+            font_size="14sp",
+            size_hint_y=None,
+            height=dp(30),
+        )
+
+        botoes.add_widget(
+            titulo_fatorial
+        )
+
+        botoes.add_widget(
+            Label(
+                text="",
+                size_hint_y=None,
+                height=dp(30),
+            )
+        )
+
+        # ====================================================
+        # TRÍADES FATORIAL
+        # ====================================================
+
+        btn_triades_f = Button(
+            text="TRÍADES\nFATORIAL",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_triades_f.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                3,
+                True
+            )
+        )
+
+        botoes.add_widget(
+            btn_triades_f
+        )
+
+        # ====================================================
+        # TÉTRADES FATORIAL
+        # ====================================================
+
+        btn_tetrades_f = Button(
+            text="TÉTRADES\nFATORIAL",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_tetrades_f.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                4,
+                True
+            )
+        )
+
+        botoes.add_widget(
+            btn_tetrades_f
+        )
+
+        # ====================================================
+        # 5 VOZES FATORIAL
+        # ====================================================
+
+        btn_5_f = Button(
+            text="5 VOZES\nFATORIAL",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_5_f.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                5,
+                True
+            )
+        )
+
+        botoes.add_widget(
+            btn_5_f
+        )
+
+        # ====================================================
+        # 6 VOZES FATORIAL
+        # ====================================================
+
+        btn_6_f = Button(
+            text="6 VOZES\nFATORIAL",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_6_f.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                6,
+                True
+            )
+        )
+
+        botoes.add_widget(
+            btn_6_f
+        )
+
+        # ====================================================
+        # 7 VOZES FATORIAL
+        # ====================================================
+
+        btn_7_f = Button(
+            text="7 VOZES\nFATORIAL",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_7_f.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                7,
+                True
+            )
+        )
+
+        botoes.add_widget(
+            btn_7_f
+        )
+
+        # ====================================================
+        # TODOS FATORIAL
+        # ====================================================
+
+        btn_todos_f = Button(
+            text="TODOS\nFATORIAL",
+            font_size="13sp",
+            size_hint_y=None,
+            height=dp(55),
+        )
+
+        btn_todos_f.bind(
+            on_release=lambda x:
+            self.selecionar_tipo(
+                None,
+                True
+            )
+        )
+
+        botoes.add_widget(
+            btn_todos_f
+        )
+
+        scroll_botoes.add_widget(
+            botoes
+        )
+
+        self.add_widget(
+            scroll_botoes
+        )# ============================================================
+# BLOCO 5 DE 7
+# RESULTADO E CONTROLE DA INTERFACE
+# ============================================================
+
+        # ====================================================
+        # RESULTADO
+        # ====================================================
+
+        scroll_resultado = ScrollView(
+            size_hint_y=0.30,
             do_scroll_x=False,
-            do_scroll_y=True,
         )
 
         self.resultado = Label(
             text=(
                 "[b]Pronto para começar.[/b]\n\n"
-                "Digite as notas e toque em CALCULAR."
+                "Digite as notas separadas por espaços "
+                "e escolha uma opção."
             ),
             markup=True,
-            font_size="14sp",
+            font_size="13sp",
             halign="left",
             valign="top",
             size_hint_y=None,
@@ -523,27 +1617,341 @@ class TelaPrincipal(BoxLayout):
         )
 
         self.resultado.bind(
-            texture_size=self.atualizar_altura_resultado
+            texture_size=self.resultado.setter(
+                "size"
+            )
         )
 
-        scroll.add_widget(self.resultado)
+        scroll_resultado.add_widget(
+            self.resultado
+        )
 
-        self.add_widget(scroll)
+        self.add_widget(
+            scroll_resultado
+        )
 
-        self.colunas = []
-        self.combinacoes = []
+        # ====================================================
+        # BOTÃO LIMPAR
+        # ====================================================
+
+        btn_limpar = Button(
+            text="LIMPAR",
+            font_size="14sp",
+            size_hint_y=None,
+            height=dp(45),
+        )
+
+        btn_limpar.bind(
+            on_release=self.limpar
+        )
+
+        self.add_widget(
+            btn_limpar
+        )
+
+
+    # ========================================================
+    # LIMPAR
+    # ========================================================
+
+    def limpar(
+        self,
+        *args
+    ):
+
+        self.notas_input.text = ""
+
+        self.k_spinner.text = "3"
+
         self.notas = []
 
-    def atualizar_altura_resultado(self, instance, tamanho):
+        self.tamanho_combinacao = 0
 
-        instance.height = max(
-            tamanho[1] + dp(20),
-            dp(100)
+        self.vozes_selecionadas = None
+
+        self.modo_fatorial = False
+
+        self.total_combinacoes = 0
+
+        self.colunas_atuais = []
+
+        self.resultado.text = (
+            "[b]Pronto para começar.[/b]\n\n"
+            "Digite as notas separadas por espaços "
+            "e escolha uma opção."
         )
 
-    def mostrar_mensagem(self, titulo, mensagem):
 
-        conteudo = BoxLayout(
+    # ========================================================
+    # LER NOTAS
+    # ========================================================
+
+    def ler_notas(
+        self
+    ):
+
+        texto = (
+            self.notas_input.text.strip()
+        )
+
+        if not texto:
+
+            raise ValueError(
+                "Digite pelo menos uma nota."
+            )
+
+        notas_digitadas = texto.split()
+
+        notas_validas = []
+
+        for nota in notas_digitadas:
+
+            nota_normalizada = normalizar_nota(
+                nota
+            )
+
+            if not nota_normalizada:
+
+                raise ValueError(
+                    f"Nota inválida: {nota}\n\n"
+                    "Use notas como:\n"
+                    "do re mi fa sol la si"
+                )
+
+            notas_validas.append(
+                nota_normalizada
+            )
+
+        if not notas_validas:
+
+            raise ValueError(
+                "Nenhuma nota válida foi encontrada."
+            )
+
+        return notas_validas
+
+
+    # ========================================================
+    # SELECIONAR TIPO
+    # ========================================================
+
+    def selecionar_tipo(
+        self,
+        vozes,
+        modo_fatorial=False
+    ):
+
+        try:
+
+            notas = self.ler_notas()
+
+            tamanho = int(
+                self.k_spinner.text
+            )
+
+            if tamanho < 1:
+
+                raise ValueError(
+                    "A quantidade de notas deve "
+                    "ser maior que zero."
+                )
+
+            if tamanho > 7:
+
+                raise ValueError(
+                    "A quantidade máxima é 7."
+                )
+
+            if tamanho > len(notas):
+
+                raise ValueError(
+                    "A quantidade de notas escolhida "
+                    "é maior que a quantidade de notas "
+                    "digitadas."
+                )
+
+            # ------------------------------------------------
+            # SOMENTE AS PRIMEIRAS K NOTAS
+            # ------------------------------------------------
+
+            notas = notas[:tamanho]
+
+            # ------------------------------------------------
+            # PREPARAR COLUNAS
+            # ------------------------------------------------
+
+            if vozes is None:
+
+                colunas_selecionadas = (
+                    preparar_colunas_todas(
+                        notas
+                    )
+                )
+
+                vozes_texto = (
+                    "TODOS OS ACORDES"
+                )
+
+            else:
+
+                if vozes < 3 or vozes > 7:
+
+                    raise ValueError(
+                        "A quantidade de vozes deve "
+                        "estar entre 3 e 7."
+                    )
+
+                colunas_selecionadas = (
+                    preparar_colunas(
+                        notas,
+                        vozes
+                    )
+                )
+
+                vozes_texto = (
+                    f"{vozes} VOZES"
+                )
+
+            # ------------------------------------------------
+            # VERIFICAR COLUNAS
+            # ------------------------------------------------
+
+            for indice, coluna in enumerate(
+                colunas_selecionadas
+            ):
+
+                if not coluna:
+
+                    raise ValueError(
+                        "A nota "
+                        f"{notas[indice].upper()} "
+                        "não possui acordes suficientes "
+                        "para esta opção."
+                    )
+
+            # ------------------------------------------------
+            # CALCULAR TOTAL
+            # ------------------------------------------------
+
+            if modo_fatorial:
+
+                total = calcular_total_fatorial(
+                    colunas_selecionadas,
+                    tamanho
+                )
+
+            else:
+
+                total = calcular_total_normal(
+                    colunas_selecionadas,
+                    tamanho
+                )
+
+            # ------------------------------------------------
+            # GUARDAR CONFIGURAÇÃO
+            # ------------------------------------------------
+
+            self.notas = notas
+
+            self.tamanho_combinacao = tamanho
+
+            self.vozes_selecionadas = vozes
+
+            self.modo_fatorial = modo_fatorial
+
+            self.total_combinacoes = total
+
+            self.colunas_atuais = (
+                colunas_selecionadas
+            )
+
+            # ------------------------------------------------
+            # MOSTRAR RESULTADO
+            # ------------------------------------------------
+
+            modo_texto = (
+                "FATORIAL"
+                if modo_fatorial
+                else "NORMAL"
+            )
+
+            notas_texto = " ".join(
+                nota.upper()
+                for nota in notas
+            )
+
+            self.resultado.text = (
+                "[b]CONFIGURAÇÃO SELECIONADA[/b]\n\n"
+                f"Notas utilizadas: {notas_texto}\n"
+                f"Quantidade de notas: {tamanho}\n"
+                f"Tipo: {vozes_texto}\n"
+                f"Modo: {modo_texto}\n\n"
+                "[b]Total de combinações:[/b]\n"
+                f"{formatar_numero(total)}"
+            )
+
+            self.confirmar_pdf()
+
+        except Exception as erro:
+
+            self.mostrar_erro(
+                str(erro)
+            )
+
+
+    # ========================================================
+    # MOSTRAR ERRO
+    # ========================================================
+
+    def mostrar_erro(
+        self,
+        mensagem
+    ):
+
+        self.mostrar_popup_mensagem(
+            "ERRO",
+            mensagem
+        )
+
+
+    # ========================================================
+    # CONFIRMAR GERAÇÃO
+    # ========================================================
+
+    def confirmar_pdf(
+        self
+    ):
+
+        total = self.total_combinacoes
+
+        mensagem = (
+            "DESEJA GERAR OS PDFs?\n\n"
+            "Total de combinações:\n"
+            f"{formatar_numero(total)}"
+        )
+
+        if total >= LIMITE_ALERTA_COMBINACOES:
+
+            mensagem += (
+                "\n\nATENÇÃO:\n"
+                "A quantidade de combinações é muito grande.\n"
+                "A geração poderá demorar bastante e ocupar "
+                "muito espaço de armazenamento."
+            )
+
+        mensagem += (
+            "\n\nCada PDF terá no máximo "
+            f"{formatar_numero(LIMITE_COMBINACOES_POR_PDF)} "
+            "combinações."
+        )
+
+        popup = Popup(
+            title="GERAR PDFs",
+            size_hint=(0.90, 0.62),
+            auto_dismiss=False,
+        )
+
+        layout = BoxLayout(
             orientation="vertical",
             padding=dp(12),
             spacing=dp(10),
@@ -551,8 +1959,247 @@ class TelaPrincipal(BoxLayout):
 
         texto = Label(
             text=mensagem,
+            font_size="14sp",
             halign="center",
             valign="middle",
+        )
+
+        texto.bind(
+            size=lambda instance, value:
+            setattr(
+                instance,
+                "text_size",
+                value
+            )
+        )
+
+        botoes = BoxLayout(
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(8),
+        )
+
+        btn_sim = Button(
+            text="SIM",
+            font_size="15sp",
+        )
+
+        btn_nao = Button(
+            text="NÃO",
+            font_size="15sp",
+        )
+
+        botoes.add_widget(
+            btn_sim
+        )
+
+        botoes.add_widget(
+            btn_nao
+        )
+
+        layout.add_widget(
+            texto
+        )
+
+        layout.add_widget(
+            botoes
+        )
+
+        popup.content = layout
+
+        btn_nao.bind(
+            on_release=popup.dismiss
+        )
+
+        btn_sim.bind(
+            on_release=lambda x:
+            self.iniciar_geracao_pdfs(
+                popup
+            )
+        )
+
+        popup.open()# ============================================================
+# BLOCO 6 DE 7
+# GERAÇÃO DOS PDFs E PROGRESSO
+# ============================================================
+
+    # ========================================================
+    # INICIAR GERAÇÃO
+    # ========================================================
+
+    def iniciar_geracao_pdfs(
+        self,
+        popup
+    ):
+
+        popup.dismiss()
+
+        self.resultado.text = (
+            "[b]GERAÇÃO DOS PDFs INICIADA[/b]\n\n"
+            "Aguarde..."
+        )
+
+        thread = threading.Thread(
+            target=self._gerar_pdfs_thread,
+            daemon=True,
+        )
+
+        thread.start()
+
+
+    # ========================================================
+    # GERAÇÃO EM SEGUNDO PLANO
+    # ========================================================
+
+    def _gerar_pdfs_thread(
+        self
+    ):
+
+        try:
+
+            gerar_pdfs_intervalo(
+                self.colunas_atuais,
+                self.tamanho_combinacao,
+                self.total_combinacoes,
+                self.modo_fatorial,
+                self.atualizar_progresso,
+                self.notas,
+                self.vozes_selecionadas,
+            )
+
+            Clock.schedule_once(
+                lambda dt:
+                self.geracao_concluida(),
+                0
+            )
+
+        except Exception as erro:
+
+            mensagem = str(
+                erro
+            )
+
+            Clock.schedule_once(
+                lambda dt:
+                self.geracao_com_erro(
+                    mensagem
+                ),
+                0
+            )
+
+
+    # ========================================================
+    # ATUALIZAR PROGRESSO
+    # ========================================================
+
+    def atualizar_progresso(
+        self,
+        mensagem
+    ):
+
+        Clock.schedule_once(
+            lambda dt:
+            self._mostrar_progresso(
+                mensagem
+            ),
+            0
+        )
+
+
+    def _mostrar_progresso(
+        self,
+        mensagem
+    ):
+
+        self.resultado.text = (
+            "[b]GERANDO PDFs...[/b]\n\n"
+            f"{mensagem}\n\n"
+            "Pasta de destino:\n"
+            f"{PASTA_DESTINO}"
+        )
+
+
+    # ========================================================
+    # GERAÇÃO CONCLUÍDA
+    # ========================================================
+
+    def geracao_concluida(
+        self
+    ):
+
+        self.resultado.text = (
+            "[b]PDFs GERADOS COM SUCESSO![/b]\n\n"
+            "Total de combinações:\n"
+            f"{formatar_numero(self.total_combinacoes)}\n\n"
+            "Pasta de destino:\n"
+            f"{PASTA_DESTINO}"
+        )
+
+        self.mostrar_popup_mensagem(
+            "CONCLUÍDO",
+            (
+                "Todos os PDFs foram gerados "
+                "com sucesso!\n\n"
+                f"Pasta:\n{PASTA_DESTINO}"
+            )
+        )
+
+
+    # ========================================================
+    # ERRO NA GERAÇÃO
+    # ========================================================
+
+    def geracao_com_erro(
+        self,
+        mensagem
+    ):
+
+        self.resultado.text = (
+            "[b]ERRO NA GERAÇÃO DOS PDFs[/b]\n\n"
+            f"{mensagem}"
+        )
+
+        self.mostrar_popup_mensagem(
+            "ERRO",
+            mensagem
+        )
+
+
+    # ========================================================
+    # POPUP DE MENSAGEM
+    # ========================================================
+
+    def mostrar_popup_mensagem(
+        self,
+        titulo,
+        mensagem
+    ):
+
+        popup = Popup(
+            title=titulo,
+            size_hint=(0.88, 0.55),
+        )
+
+        layout = BoxLayout(
+            orientation="vertical",
+            padding=dp(12),
+            spacing=dp(10),
+        )
+
+        texto = Label(
+            text=mensagem,
+            font_size="14sp",
+            halign="center",
+            valign="middle",
+        )
+
+        texto.bind(
+            size=lambda instance, value:
+            setattr(
+                instance,
+                "text_size",
+                value
+            )
         )
 
         botao = Button(
@@ -561,223 +2208,24 @@ class TelaPrincipal(BoxLayout):
             height=dp(45),
         )
 
-        conteudo.add_widget(texto)
-        conteudo.add_widget(botao)
-
-        popup = Popup(
-            title=titulo,
-            content=conteudo,
-            size_hint=(0.9, 0.55),
+        botao.bind(
+            on_release=popup.dismiss
         )
 
-        botao.bind(on_release=popup.dismiss)
-
-        popup.open()
-
-    def calcular(self, *args):
-
-        texto = self.notas_input.text.strip()
-
-        if not texto:
-
-            self.mostrar_mensagem(
-                "TRIADES",
-                "Digite pelo menos uma nota.\n\n"
-                "Exemplo: C, E, G"
-            )
-
-            return
-
-        notas = [
-            normalize_note_input(n)
-            for n in texto.split(",")
-            if n.strip()
-        ]
-
-        notas = [n for n in notas if n]
-
-        if not notas:
-
-            self.mostrar_mensagem(
-                "TRIADES",
-                "Nenhuma nota válida foi encontrada."
-            )
-
-            return
-
-        campo = self.campo_spinner.text
-
-        colunas = obter_colunas(notas, campo)
-
-        if not colunas:
-
-            self.mostrar_mensagem(
-                "Erro",
-                "Não foi possível encontrar o campo harmônico."
-            )
-
-            return
-
-        for indice, coluna in enumerate(colunas):
-
-            if not coluna:
-
-                self.resultado.text = (
-                    "[b]NENHUM ACORDE ENCONTRADO[/b]\n\n"
-                    f"Nota: {notas[indice]}\n\n"
-                    "Verifique a nota digitada e o campo escolhido."
-                )
-
-                self.btn_pdf.disabled = True
-
-                return
-
-        combinacoes = list(product(*colunas))
-
-        self.notas = notas
-        self.colunas = colunas
-        self.combinacoes = combinacoes
-
-        linhas = []
-
-        linhas.append("[b]RESULTADO[/b]")
-        linhas.append("")
-        linhas.append(f"[b]Campo Harmônico:[/b] {campo}")
-        linhas.append(f"[b]Notas:[/b] {', '.join(notas)}")
-        linhas.append("")
-        linhas.append("[b]ACORDES POR NOTA[/b]")
-        linhas.append("")
-
-        for indice, nota in enumerate(notas, start=1):
-
-            coluna = colunas[indice - 1]
-
-            linhas.append(
-                f"[b]Coluna {indice} — {nota}[/b]"
-            )
-
-            linhas.append(
-                " | ".join(coluna)
-            )
-
-            linhas.append("")
-
-        linhas.append("[b]COMBINAÇÕES[/b]")
-        linhas.append("")
-        linhas.append(
-            f"Total: {len(combinacoes)}"
-        )
-        linhas.append("")
-
-        for indice, combinacao in enumerate(
-            combinacoes,
-            start=1
-        ):
-
-            linhas.append(
-                f"{indice}. {' - '.join(combinacao)}"
-            )
-
-        self.resultado.text = "\n".join(linhas)
-
-        self.btn_pdf.disabled = False
-
-    def obter_pasta_pdf(self):
-
-        # Primeiro tenta a pasta Download pública.
-        candidatos = [
-            "/storage/emulated/0/Download",
-            "/sdcard/Download",
-            "/storage/emulated/0/Downloads",
-        ]
-
-        for pasta in candidatos:
-
-            try:
-
-                if os.path.isdir(pasta) and os.access(
-                    pasta,
-                    os.W_OK
-                ):
-                    return pasta
-
-            except Exception:
-                pass
-
-        # Fallback seguro: pasta privada do aplicativo.
-        return App.get_running_app().user_data_dir
-
-    def gerar_pdf(self, *args):
-
-        if not self.combinacoes:
-
-            self.mostrar_mensagem(
-                "TRIADES",
-                "Primeiro faça um cálculo."
-            )
-
-            return
-
-        try:
-
-            pasta = self.obter_pasta_pdf()
-
-            os.makedirs(
-                pasta,
-                exist_ok=True
-            )
-
-            campo = self.campo_spinner.text
-
-            data = datetime.now().strftime(
-                "%Y%m%d_%H%M%S"
-            )
-
-            nome = (
-                f"TRIADES_{campo}_{data}.pdf"
-            )
-
-            caminho = os.path.join(
-                pasta,
-                nome
-            )
-
-            gerar_pdf(
-                caminho,
-                campo,
-                self.notas,
-                self.colunas,
-                self.combinacoes,
-            )
-
-            self.mostrar_mensagem(
-                "PDF GERADO",
-                "PDF gerado com sucesso!\n\n"
-                f"{caminho}"
-            )
-
-        except Exception as erro:
-
-            self.mostrar_mensagem(
-                "PDF",
-                str(erro)
-            )
-
-    def limpar(self, *args):
-
-        self.notas_input.text = ""
-        self.campo_spinner.text = "C"
-
-        self.resultado.text = (
-            "[b]Pronto para começar.[/b]\n\n"
-            "Digite as notas e toque em CALCULAR."
+        layout.add_widget(
+            texto
         )
 
-        self.btn_pdf.disabled = True
+        layout.add_widget(
+            botao
+        )
 
-        self.notas = []
-        self.colunas = []
-        self.combinacoes = []
+        popup.content = layout
+
+        popup.open()# ============================================================
+# BLOCO 7 DE 7
+# FINAL DO APLICATIVO
+# ============================================================
 
 
 class TriadesApp(App):
@@ -789,5 +2237,10 @@ class TriadesApp(App):
         return TelaPrincipal()
 
 
+# ============================================================
+# INICIAR APLICATIVO
+# ============================================================
+
 if __name__ == "__main__":
+
     TriadesApp().run()
