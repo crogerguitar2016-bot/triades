@@ -16,6 +16,8 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.metrics import dp
 
+from kivy.graphics import Color, RoundedRectangle, Line
+
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
@@ -24,6 +26,112 @@ from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
+
+
+# ============================================================
+# BOTÃO 3D
+# ============================================================
+
+class Botao3D(Button):
+
+    def __init__(
+        self,
+        cor=(0.15, 0.45, 0.85, 1),
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+
+        self.cor_base = cor
+
+        with self.canvas.before:
+            self.cor_sombra = Color(
+                0.08,
+                0.08,
+                0.08,
+                1
+            )
+
+            self.fundo_sombra = RoundedRectangle(
+                pos=(self.x + dp(2), self.y - dp(3)),
+                size=self.size,
+                radius=[dp(8)]
+            )
+
+            self.cor_fundo = Color(
+                *self.cor_base
+            )
+
+            self.fundo = RoundedRectangle(
+                pos=self.pos,
+                size=self.size,
+                radius=[dp(8)]
+            )
+
+        with self.canvas.after:
+            self.cor_borda = Color(
+                1,
+                1,
+                1,
+                0.35
+            )
+
+            self.borda = Line(
+                rounded_rectangle=(
+                    self.x,
+                    self.y,
+                    self.width,
+                    self.height,
+                    dp(8)
+                ),
+                width=dp(1)
+            )
+
+        self.bind(
+            pos=self._atualizar_visual,
+            size=self._atualizar_visual,
+            state=self._atualizar_estado
+        )
+
+    def _atualizar_visual(
+        self,
+        *args
+    ):
+        self.fundo_sombra.pos = (
+            self.x + dp(2),
+            self.y - dp(3)
+        )
+
+        self.fundo_sombra.size = self.size
+
+        self.fundo.pos = self.pos
+        self.fundo.size = self.size
+
+        self.borda.rounded_rectangle = (
+            self.x,
+            self.y,
+            self.width,
+            self.height,
+            dp(8)
+        )
+
+    def _atualizar_estado(
+        self,
+        *args
+    ):
+        if self.state == "down":
+            self.fundo.pos = (
+                self.x + dp(1),
+                self.y - dp(1)
+            )
+
+            self.cor_fundo.rgba = tuple(
+                max(0, valor * 0.78)
+                for valor in self.cor_base[:3]
+            ) + (self.cor_base[3],)
+
+        else:
+            self.fundo.pos = self.pos
+            self.cor_fundo.rgba = self.cor_base
 
 
 # ============================================================
@@ -1182,19 +1290,64 @@ class TelaPrincipal(BoxLayout):
         # ENTRADA DAS NOTAS
         # ====================================================
 
-        self.notas_input = TextInput(
-            hint_text=(
-                "Digite as notas separadas por espaços: "
-                "do re mi fa sol"
-            ),
-            multiline=False,
+        self.notas_selecionadas = []
+
+        self.notas_input = Label(
+            text="Notas selecionadas: ",
             size_hint_y=None,
-            height=dp(45),
-            font_size="16sp",
+            height=dp(42),
+            font_size="17sp",
+            markup=True,
         )
 
         self.add_widget(
             self.notas_input
+        )
+
+        grade_notas = GridLayout(
+            cols=4,
+            spacing=dp(6),
+            padding=[dp(4), dp(4)],
+            size_hint_y=None,
+            height=dp(100),
+        )
+
+        notas_botoes = [
+            ("C", (0.90, 0.05, 0.05, 1)),   # Dó - vermelho
+            ("D", (1.00, 0.45, 0.00, 1)),   # Ré - laranja
+            ("E", (1.00, 0.85, 0.00, 1)),   # Mi - amarelo
+            ("F", (0.10, 0.70, 0.20, 1)),   # Fá - verde
+            ("G", (0.05, 0.35, 0.95, 1)),   # Sol - azul
+            ("A", (0.25, 0.10, 0.65, 1)),   # Lá - anil
+            ("B", (0.60, 0.05, 0.75, 1)),   # Si - violeta
+        ]
+
+        for nome_nota, cor_nota in notas_botoes:
+
+            botao_nota = Botao3D(
+                text=nome_nota,
+                cor=cor_nota,
+                font_size="20sp",
+                bold=True,
+                size_hint_y=None,
+                height=dp(43),
+                background_normal="",
+                background_down="",
+                background_color=(0, 0, 0, 0),
+                color=(1, 1, 1, 1),
+            )
+
+            botao_nota.bind(
+                on_release=lambda botao, nota=nome_nota:
+                    self.selecionar_nota(nota)
+            )
+
+            grade_notas.add_widget(
+                botao_nota
+            )
+
+        self.add_widget(
+            grade_notas
         )
 
         # ====================================================
@@ -1232,8 +1385,59 @@ class TelaPrincipal(BoxLayout):
             label_k
         )
 
+        # O Spinner continua existindo internamente
+        # para manter a lógica matemática original.
+        # Os botões abaixo controlam self.k_spinner.text.
+
+        botoes_quantidade = GridLayout(
+            cols=7,
+            spacing=dp(4),
+            size_hint_x=0.45,
+            size_hint_y=None,
+            height=dp(42),
+        )
+
+        cores_quantidade = [
+            (0.90, 0.05, 0.05, 1),
+            (1.00, 0.45, 0.00, 1),
+            (1.00, 0.85, 0.00, 1),
+            (0.10, 0.70, 0.20, 1),
+            (0.05, 0.35, 0.95, 1),
+            (0.25, 0.10, 0.65, 1),
+            (0.60, 0.05, 0.75, 1),
+        ]
+
+        for numero, cor in zip(
+            ["1", "2", "3", "4", "5", "6", "7"],
+            cores_quantidade
+        ):
+
+            botao_quantidade = Botao3D(
+                text=numero,
+                cor=cor,
+                font_size="15sp",
+                bold=True,
+                background_normal="",
+                background_down="",
+                background_color=(0, 0, 0, 0),
+                color=(1, 1, 1, 1),
+            )
+
+            botao_quantidade.bind(
+                on_release=lambda botao, valor=numero:
+                    setattr(
+                        self.k_spinner,
+                        "text",
+                        valor
+                    )
+            )
+
+            botoes_quantidade.add_widget(
+                botao_quantidade
+            )
+
         linha_k.add_widget(
-            self.k_spinner
+            botoes_quantidade
         )
 
         self.add_widget(
@@ -1286,7 +1490,8 @@ class TelaPrincipal(BoxLayout):
         # TRÍADES
         # ====================================================
 
-        btn_triades = Button(
+        btn_triades = Botao3D(
+            cor=(0.90, 0.05, 0.05, 1),
             text="TRÍADES\n3 VOZES",
             font_size="13sp",
             size_hint_y=None,
@@ -1309,7 +1514,8 @@ class TelaPrincipal(BoxLayout):
         # TÉTRADES
         # ====================================================
 
-        btn_tetrades = Button(
+        btn_tetrades = Botao3D(
+            cor=(1.00, 0.45, 0.00, 1),
             text="TÉTRADES\n4 VOZES",
             font_size="13sp",
             size_hint_y=None,
@@ -1332,7 +1538,8 @@ class TelaPrincipal(BoxLayout):
         # 5 VOZES
         # ====================================================
 
-        btn_5 = Button(
+        btn_5 = Botao3D(
+            cor=(1.00, 0.85, 0.00, 1),
             text="5 VOZES",
             font_size="13sp",
             size_hint_y=None,
@@ -1355,7 +1562,8 @@ class TelaPrincipal(BoxLayout):
         # 6 VOZES
         # ====================================================
 
-        btn_6 = Button(
+        btn_6 = Botao3D(
+            cor=(0.10, 0.70, 0.20, 1),
             text="6 VOZES",
             font_size="13sp",
             size_hint_y=None,
@@ -1378,7 +1586,8 @@ class TelaPrincipal(BoxLayout):
         # 7 VOZES
         # ====================================================
 
-        btn_7 = Button(
+        btn_7 = Botao3D(
+            cor=(0.05, 0.35, 0.95, 1),
             text="7 VOZES",
             font_size="13sp",
             size_hint_y=None,
@@ -1401,7 +1610,8 @@ class TelaPrincipal(BoxLayout):
         # TODOS
         # ====================================================
 
-        btn_todos = Button(
+        btn_todos = Botao3D(
+            cor=(0.60, 0.05, 0.75, 1),
             text="TODOS OS\nACORDES",
             font_size="13sp",
             size_hint_y=None,
@@ -1448,7 +1658,8 @@ class TelaPrincipal(BoxLayout):
         # TRÍADES FATORIAL
         # ====================================================
 
-        btn_triades_f = Button(
+        btn_triades_f = Botao3D(
+            cor=(0.90, 0.05, 0.05, 1),
             text="TRÍADES\nFATORIAL",
             font_size="13sp",
             size_hint_y=None,
@@ -1471,7 +1682,8 @@ class TelaPrincipal(BoxLayout):
         # TÉTRADES FATORIAL
         # ====================================================
 
-        btn_tetrades_f = Button(
+        btn_tetrades_f = Botao3D(
+            cor=(1.00, 0.45, 0.00, 1),
             text="TÉTRADES\nFATORIAL",
             font_size="13sp",
             size_hint_y=None,
@@ -1494,7 +1706,8 @@ class TelaPrincipal(BoxLayout):
         # 5 VOZES FATORIAL
         # ====================================================
 
-        btn_5_f = Button(
+        btn_5_f = Botao3D(
+            cor=(1.00, 0.85, 0.00, 1),
             text="5 VOZES\nFATORIAL",
             font_size="13sp",
             size_hint_y=None,
@@ -1517,7 +1730,8 @@ class TelaPrincipal(BoxLayout):
         # 6 VOZES FATORIAL
         # ====================================================
 
-        btn_6_f = Button(
+        btn_6_f = Botao3D(
+            cor=(0.10, 0.70, 0.20, 1),
             text="6 VOZES\nFATORIAL",
             font_size="13sp",
             size_hint_y=None,
@@ -1540,7 +1754,8 @@ class TelaPrincipal(BoxLayout):
         # 7 VOZES FATORIAL
         # ====================================================
 
-        btn_7_f = Button(
+        btn_7_f = Botao3D(
+            cor=(0.05, 0.35, 0.95, 1),
             text="7 VOZES\nFATORIAL",
             font_size="13sp",
             size_hint_y=None,
@@ -1563,7 +1778,8 @@ class TelaPrincipal(BoxLayout):
         # TODOS FATORIAL
         # ====================================================
 
-        btn_todos_f = Button(
+        btn_todos_f = Botao3D(
+            cor=(0.60, 0.05, 0.75, 1),
             text="TODOS\nFATORIAL",
             font_size="13sp",
             size_hint_y=None,
@@ -1651,6 +1867,34 @@ class TelaPrincipal(BoxLayout):
 
 
     # ========================================================
+    # SELEÇÃO DAS NOTAS
+    # ========================================================
+
+    def selecionar_nota(
+        self,
+        nota,
+        *args
+    ):
+
+        if nota in self.notas_selecionadas:
+
+            self.notas_selecionadas.remove(
+                nota
+            )
+
+        else:
+
+            self.notas_selecionadas.append(
+                nota
+            )
+
+        self.notas_input.text = (
+            "[b]Notas selecionadas:[/b] "
+            + " ".join(self.notas_selecionadas)
+        )
+
+
+    # ========================================================
     # LIMPAR
     # ========================================================
 
@@ -1659,7 +1903,11 @@ class TelaPrincipal(BoxLayout):
         *args
     ):
 
-        self.notas_input.text = ""
+        self.notas_selecionadas = []
+
+        self.notas_input.text = (
+            "[b]Notas selecionadas:[/b] "
+        )
 
         self.k_spinner.text = "3"
 
@@ -1690,21 +1938,15 @@ class TelaPrincipal(BoxLayout):
         self
     ):
 
-        texto = (
-            self.notas_input.text.strip()
-        )
-
-        if not texto:
+        if not self.notas_selecionadas:
 
             raise ValueError(
-                "Digite pelo menos uma nota."
+                "Selecione pelo menos uma nota."
             )
-
-        notas_digitadas = texto.split()
 
         notas_validas = []
 
-        for nota in notas_digitadas:
+        for nota in self.notas_selecionadas:
 
             nota_normalizada = normalizar_nota(
                 nota
@@ -1714,8 +1956,7 @@ class TelaPrincipal(BoxLayout):
 
                 raise ValueError(
                     f"Nota inválida: {nota}\n\n"
-                    "Use notas como:\n"
-                    "do re mi fa sol la si"
+                    "Use as notas naturais: C D E F G A B"
                 )
 
             notas_validas.append(
@@ -1957,11 +2198,33 @@ class TelaPrincipal(BoxLayout):
             spacing=dp(10),
         )
 
+        mensagem = (
+            "[color=#1565C0][b]DESEJA GERAR OS PDFs?[/b][/color]\n\n"
+            "Total de combinações:\n"
+            f"{formatar_numero(total)}"
+        )
+
+        if total >= LIMITE_ALERTA_COMBINACOES:
+
+            mensagem += (
+                "\n\nATENÇÃO:\n"
+                "A quantidade de combinações é muito grande.\n"
+                "A geração poderá demorar bastante e ocupar "
+                "muito espaço de armazenamento."
+            )
+
+        mensagem += (
+            "\n\nCada PDF terá no máximo "
+            f"{formatar_numero(LIMITE_COMBINACOES_POR_PDF)} "
+            "combinações."
+        )
+
         texto = Label(
             text=mensagem,
             font_size="14sp",
             halign="center",
             valign="middle",
+            markup=True,
         )
 
         texto.bind(
@@ -1982,11 +2245,21 @@ class TelaPrincipal(BoxLayout):
         btn_sim = Button(
             text="SIM",
             font_size="15sp",
+            background_normal="",
+            background_down="",
+            background_color=(0.10, 0.70, 0.20, 1),
+            color=(1, 1, 1, 1),
+            bold=True,
         )
 
         btn_nao = Button(
             text="NÃO",
             font_size="15sp",
+            background_normal="",
+            background_down="",
+            background_color=(0.90, 0.05, 0.05, 1),
+            color=(1, 1, 1, 1),
+            bold=True,
         )
 
         botoes.add_widget(
@@ -2222,12 +2495,7 @@ class TelaPrincipal(BoxLayout):
 
         popup.content = layout
 
-        popup.open()# ============================================================
-# BLOCO 7 DE 7
-# FINAL DO APLICATIVO
-# ============================================================
-
-
+        popup.open()
 class TriadesApp(App):
 
     title = "TRIADES"
