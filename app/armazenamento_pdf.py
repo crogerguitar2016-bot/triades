@@ -216,31 +216,58 @@ def _publicar_android_mediastore(caminho):
     BuildVersion = autoclass(
         "android.os.Build$VERSION"
     )
+    JavaString = autoclass(
+        "java.lang.String"
+    )
     JavaInteger = autoclass(
         "java.lang.Integer"
     )
 
+    def jstring(valor):
+        return JavaString(
+            str(valor)
+        )
+
     activity = PythonActivity.mActivity
     resolver = activity.getContentResolver()
 
-    # Android 10+ (API 29+): Scoped Storage / MediaStore.
+    # Android 10+:
+    # publica pelo MediaStore dentro de Download/Harmonizador.
     if int(BuildVersion.SDK_INT) >= 29:
+
         values = ContentValues()
 
         values.put(
-            MediaStoreMediaColumns.DISPLAY_NAME,
-            caminho.name,
+            jstring(
+                MediaStoreMediaColumns.DISPLAY_NAME
+            ),
+            jstring(
+                caminho.name
+            ),
         )
+
         values.put(
-            MediaStoreMediaColumns.MIME_TYPE,
-            "application/pdf",
+            jstring(
+                MediaStoreMediaColumns.MIME_TYPE
+            ),
+            jstring(
+                "application/pdf"
+            ),
         )
+
         values.put(
-            MediaStoreMediaColumns.RELATIVE_PATH,
-            DESTINO_PUBLICO_ANDROID,
+            jstring(
+                MediaStoreMediaColumns.RELATIVE_PATH
+            ),
+            jstring(
+                DESTINO_PUBLICO_ANDROID
+            ),
         )
+
         values.put(
-            MediaStoreMediaColumns.IS_PENDING,
+            jstring(
+                MediaStoreMediaColumns.IS_PENDING
+            ),
             JavaInteger.valueOf(1),
         )
 
@@ -251,8 +278,8 @@ def _publicar_android_mediastore(caminho):
 
         if uri is None:
             raise RuntimeError(
-                "O Android não conseguiu criar o PDF em "
-                f"{DESTINO_PUBLICO_ANDROID}."
+                "O Android não conseguiu criar "
+                "o arquivo em Download/Harmonizador."
             )
 
         saida = None
@@ -260,17 +287,19 @@ def _publicar_android_mediastore(caminho):
         try:
             saida = resolver.openOutputStream(
                 uri,
-                "w",
+                jstring("w"),
             )
 
             if saida is None:
                 raise RuntimeError(
-                    "Não foi possível abrir o destino do PDF "
-                    "no armazenamento do Android."
+                    "Não foi possível abrir o destino "
+                    "do PDF no armazenamento do Android."
                 )
 
             with caminho.open("rb") as origem:
+
                 while True:
+
                     bloco = origem.read(
                         TAMANHO_BLOCO_COPIA
                     )
@@ -278,9 +307,11 @@ def _publicar_android_mediastore(caminho):
                     if not bloco:
                         break
 
-                    # PyJNIus converte bytes/bytearray para byte[].
                     try:
-                        saida.write(bloco)
+                        saida.write(
+                            bloco
+                        )
+
                     except Exception:
                         saida.write(
                             bytearray(bloco)
@@ -290,15 +321,18 @@ def _publicar_android_mediastore(caminho):
             saida.close()
             saida = None
 
-            liberar = ContentValues()
-            liberar.put(
-                MediaStoreMediaColumns.IS_PENDING,
+            finalizar = ContentValues()
+
+            finalizar.put(
+                jstring(
+                    MediaStoreMediaColumns.IS_PENDING
+                ),
                 JavaInteger.valueOf(0),
             )
 
             resolver.update(
                 uri,
-                liberar,
+                finalizar,
                 None,
                 None,
             )
@@ -306,6 +340,7 @@ def _publicar_android_mediastore(caminho):
             return str(uri)
 
         except Exception:
+
             try:
                 if saida is not None:
                     saida.close()
@@ -323,20 +358,24 @@ def _publicar_android_mediastore(caminho):
 
             raise
 
-    # Android 9 ou anterior: gravação direta, compatível com a permissão
-    # WRITE_EXTERNAL_STORAGE já existente no projeto.
+    # Android 9 ou inferior.
     pasta_download = Path(
         "/storage/emulated/0/Download/Harmonizador"
     )
+
     pasta_download.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    destino = pasta_download / caminho.name
+    destino = (
+        pasta_download
+        / caminho.name
+    )
 
     with caminho.open("rb") as origem:
         with destino.open("wb") as saida:
+
             shutil.copyfileobj(
                 origem,
                 saida,

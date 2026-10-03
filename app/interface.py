@@ -852,7 +852,7 @@ class BotaoCalcular(BotaoArredondado):
         )
 
         self.text = (
-            "CALCULAR E GERAR PDF"
+            "CALCULAR COMBINAÇÕES"
         )
 
         self.bold = True
@@ -2247,7 +2247,7 @@ class TelaPrincipal(BoxLayout):
             )
         else:
             self.botao_calcular_atonal.text = (
-                "CALCULAR E GERAR PDF"
+                "CALCULAR COMBINAÇÕES"
             )
 
         self.botao_calcular_atonal.disabled = (
@@ -2393,11 +2393,419 @@ class TelaPrincipal(BoxLayout):
     # independentemente da quantidade total de combinações.
     # ========================================================
 
-    def _mostrar_aviso_calculo_grande(
+
+    # ========================================================
+    # ETAPA_9_9_PREVIA_COMBINACOES
+    #
+    # Mostra as combinações antes de gerar qualquer PDF.
+    # Apenas 200 combinações ficam na tela por vez.
+    # Nenhuma lista gigante é criada em memória.
+    # ========================================================
+
+    def _combinacao_por_indice(
         self,
-        total,
-        ao_continuar,
+        listas,
+        indice,
     ):
+        """
+        Obtém diretamente uma combinação do produto cartesiano
+        sem percorrer todas as anteriores.
+
+        A ordem é equivalente a itertools.product:
+        a última coluna varia mais rapidamente.
+        """
+        combinacao = [
+            None
+        ] * len(listas)
+
+        restante = int(
+            indice
+        )
+
+        for posicao in range(
+            len(listas) - 1,
+            -1,
+            -1,
+        ):
+            tamanho = len(
+                listas[posicao]
+            )
+
+            if tamanho <= 0:
+                return None
+
+            restante, indice_local = divmod(
+                restante,
+                tamanho,
+            )
+
+            combinacao[posicao] = (
+                listas[posicao][
+                    indice_local
+                ]
+            )
+
+        return combinacao
+
+
+    def _mostrar_previa_combinacoes(
+        self,
+        resultado,
+        sistema,
+        pagina=0,
+    ):
+        limite_pagina = 200
+
+        total = int(
+            resultado[
+                "total_combinacoes"
+            ]
+        )
+
+        if total <= 0:
+            self.painel_opcoes.clear_widgets()
+            self.painel_opcoes.opacity = 1
+
+            self.painel_opcoes.add_widget(
+                self._label(
+                    "[b]NENHUMA COMBINAÇÃO ENCONTRADA[/b]",
+                    tamanho=18,
+                    altura=48,
+                    destaque=True,
+                )
+            )
+
+            voltar = (
+                lambda:
+                self._mostrar_notas_atonal(
+                    False
+                )
+                if sistema == "atonal"
+                else self._mostrar_notas()
+            )
+
+            self.painel_opcoes.add_widget(
+                BotaoVoltar(
+                    texto="VOLTAR",
+                    callback=voltar,
+                )
+            )
+
+            self.painel_opcoes.height = (
+                self.painel_opcoes.minimum_height
+            )
+            return
+
+        total_paginas = (
+            total
+            + limite_pagina
+            - 1
+        ) // limite_pagina
+
+        pagina = max(
+            0,
+            min(
+                int(pagina),
+                total_paginas - 1,
+            ),
+        )
+
+        inicio = (
+            pagina
+            * limite_pagina
+        )
+
+        fim = min(
+            inicio + limite_pagina,
+            total,
+        )
+
+        listas = [
+            [
+                acorde["nome"]
+                for acorde in coluna
+            ]
+            for coluna in resultado[
+                "colunas"
+            ]
+        ]
+
+        self.painel_opcoes.clear_widgets()
+        self.painel_opcoes.opacity = 1
+
+        titulo = (
+            "COMBINAÇÕES ATONAIS"
+            if sistema == "atonal"
+            else "COMBINAÇÕES POSSÍVEIS"
+        )
+
+        self.painel_opcoes.add_widget(
+            self._label(
+                f"[b]{titulo}[/b]",
+                tamanho=19,
+                altura=48,
+                destaque=True,
+            )
+        )
+
+        if sistema == "atonal":
+            descricao = (
+                resultado[
+                    "descricao_vozes"
+                ]
+            )
+        else:
+            descricao = (
+                resultado[
+                    "descricao_campo"
+                ]
+                + "\n"
+                + resultado[
+                    "descricao_vozes"
+                ]
+            )
+
+        self.painel_opcoes.add_widget(
+            self._label(
+                descricao,
+                tamanho=13,
+                altura=58,
+            )
+        )
+
+        self.painel_opcoes.add_widget(
+            self._label(
+                (
+                    "Notas: "
+                    + " - ".join(
+                        resultado[
+                            "notas_exibicao"
+                        ]
+                    )
+                ),
+                tamanho=13,
+                altura=38,
+            )
+        )
+
+        self.painel_opcoes.add_widget(
+            self._label(
+                (
+                    "[b]TOTAL DE COMBINAÇÕES: "
+                    f"{self._numero_pt(total)}"
+                    "[/b]"
+                ),
+                tamanho=17,
+                altura=46,
+                destaque=True,
+            )
+        )
+
+        self.painel_opcoes.add_widget(
+            self._label(
+                (
+                    f"Página {self._numero_pt(pagina + 1)} "
+                    f"de {self._numero_pt(total_paginas)}\n"
+                    f"Mostrando {self._numero_pt(inicio + 1)} "
+                    f"até {self._numero_pt(fim)}"
+                ),
+                tamanho=13,
+                altura=52,
+            )
+        )
+
+        # ----------------------------------------------------
+        # Navegação superior
+        # ----------------------------------------------------
+
+        if pagina > 0:
+            self.painel_opcoes.add_widget(
+                BotaoVoltar(
+                    texto="← PÁGINA ANTERIOR",
+                    callback=lambda:
+                    self._mostrar_previa_combinacoes(
+                        resultado,
+                        sistema,
+                        pagina - 1,
+                    ),
+                )
+            )
+
+        if pagina + 1 < total_paginas:
+            self.painel_opcoes.add_widget(
+                BotaoVoltar(
+                    texto="PRÓXIMA PÁGINA →",
+                    callback=lambda:
+                    self._mostrar_previa_combinacoes(
+                        resultado,
+                        sistema,
+                        pagina + 1,
+                    ),
+                )
+            )
+
+        if pagina > 1:
+            self.painel_opcoes.add_widget(
+                BotaoVoltar(
+                    texto="IR PARA A PRIMEIRA PÁGINA",
+                    callback=lambda:
+                    self._mostrar_previa_combinacoes(
+                        resultado,
+                        sistema,
+                        0,
+                    ),
+                )
+            )
+
+        if pagina < total_paginas - 2:
+            self.painel_opcoes.add_widget(
+                BotaoVoltar(
+                    texto="IR PARA A ÚLTIMA PÁGINA",
+                    callback=lambda:
+                    self._mostrar_previa_combinacoes(
+                        resultado,
+                        sistema,
+                        total_paginas - 1,
+                    ),
+                )
+            )
+
+        # ----------------------------------------------------
+        # Combinações desta página
+        # ----------------------------------------------------
+
+        for indice_global in range(
+            inicio,
+            fim,
+        ):
+            combinacao = (
+                self._combinacao_por_indice(
+                    listas,
+                    indice_global,
+                )
+            )
+
+            numero = (
+                indice_global + 1
+            )
+
+            texto_combinacao = (
+                "  |  ".join(
+                    combinacao
+                )
+            )
+
+            self.painel_opcoes.add_widget(
+                self._label(
+                    (
+                        f"{numero:02d}. "
+                        f"{texto_combinacao}"
+                    ),
+                    tamanho=11,
+                    altura=48,
+                )
+            )
+
+        # ----------------------------------------------------
+        # Navegação inferior
+        # ----------------------------------------------------
+
+        if pagina > 0:
+            self.painel_opcoes.add_widget(
+                BotaoVoltar(
+                    texto="← PÁGINA ANTERIOR",
+                    callback=lambda:
+                    self._mostrar_previa_combinacoes(
+                        resultado,
+                        sistema,
+                        pagina - 1,
+                    ),
+                )
+            )
+
+        if pagina + 1 < total_paginas:
+            self.painel_opcoes.add_widget(
+                BotaoVoltar(
+                    texto="PRÓXIMA PÁGINA →",
+                    callback=lambda:
+                    self._mostrar_previa_combinacoes(
+                        resultado,
+                        sistema,
+                        pagina + 1,
+                    ),
+                )
+            )
+
+        # ----------------------------------------------------
+        # Só agora aparece a opção de gerar PDF
+        # ----------------------------------------------------
+
+        botao_pdf = BotaoCalcular(
+            callback=lambda:
+            self._perguntar_gerar_pdf(
+                resultado,
+                sistema,
+            )
+        )
+
+        botao_pdf.text = (
+            "GERAR PDF"
+        )
+
+        self.painel_opcoes.add_widget(
+            botao_pdf
+        )
+
+        voltar = (
+            lambda:
+            self._mostrar_notas_atonal(
+                False
+            )
+            if sistema == "atonal"
+            else self._mostrar_notas()
+        )
+
+        self.painel_opcoes.add_widget(
+            BotaoVoltar(
+                texto="VOLTAR ÀS NOTAS",
+                callback=voltar,
+            )
+        )
+
+        self.painel_opcoes.height = (
+            self.painel_opcoes.minimum_height
+        )
+
+        self.status.text = (
+            "[b]Confira as combinações antes de gerar o PDF[/b]"
+        )
+
+        Clock.schedule_once(
+            lambda dt:
+            setattr(
+                self.scroll_principal,
+                "scroll_y",
+                1,
+            ),
+            0.05,
+        )
+
+
+    # ========================================================
+    # PRIMEIRA CONFIRMAÇÃO
+    # ========================================================
+
+    def _perguntar_gerar_pdf(
+        self,
+        resultado,
+        sistema,
+    ):
+        total = int(
+            resultado[
+                "total_combinacoes"
+            ]
+        )
+
         total_pdfs = (
             total
             + LIMITE_COMBINACOES_POR_PDF
@@ -2405,8 +2813,8 @@ class TelaPrincipal(BoxLayout):
         ) // LIMITE_COMBINACOES_POR_PDF
 
         popup = Popup(
-            title="ATENÇÃO — CÁLCULO MUITO GRANDE",
-            size_hint=(0.92, 0.70),
+            title="GERAR PDF?",
+            size_hint=(0.92, 0.58),
             auto_dismiss=False,
         )
 
@@ -2418,15 +2826,10 @@ class TelaPrincipal(BoxLayout):
 
         mensagem = Label(
             text=(
-                "[b]Este cálculo possui "
-                f"{self._numero_pt(total)} combinações.[/b]\n\n"
-                f"Serão gerados {self._numero_pt(total_pdfs)} PDF(s) "
-                "automaticamente, com no máximo "
-                f"{self._numero_pt(LIMITE_COMBINACOES_POR_PDF)} "
-                "combinações por arquivo.\n\n"
-                "A geração pode demorar bastante e ocupar "
-                "espaço considerável no armazenamento.\n\n"
-                "Você pode continuar normalmente."
+                "[b]Deseja gerar o PDF com estas combinações?[/b]\n\n"
+                f"Total: {self._numero_pt(total)} combinações\n"
+                f"Quantidade prevista: {self._numero_pt(total_pdfs)} PDF(s)\n\n"
+                "Nenhum PDF será criado até você confirmar."
             ),
             markup=True,
             halign="center",
@@ -2444,16 +2847,237 @@ class TelaPrincipal(BoxLayout):
 
         botoes = BoxLayout(
             size_hint_y=None,
-            height=dp(52),
+            height=dp(54),
+            spacing=dp(10),
+        )
+
+        botao_sim = Button(
+            text="SIM, GERAR PDF",
+            bold=True,
+            background_normal="",
+            background_down="",
+            background_color=(
+                0.18,
+                0.55,
+                0.28,
+                1,
+            ),
+            color=(
+                1,
+                1,
+                1,
+                1,
+            ),
+        )
+
+        botao_nao = Button(
+            text="NÃO",
+            bold=True,
+            background_normal="",
+            background_down="",
+            background_color=(
+                0.55,
+                0.18,
+                0.18,
+                1,
+            ),
+            color=(
+                1,
+                1,
+                1,
+                1,
+            ),
+        )
+
+        botoes.add_widget(
+            botao_sim
+        )
+        botoes.add_widget(
+            botao_nao
+        )
+
+        layout.add_widget(
+            mensagem
+        )
+        layout.add_widget(
+            botoes
+        )
+
+        popup.content = layout
+
+        botao_nao.bind(
+            on_release=popup.dismiss
+        )
+
+        def confirmar(*_):
+            popup.dismiss()
+
+            if (
+                total
+                >= LIMITE_AVISO_COMBINACOES
+            ):
+                self._mostrar_aviso_calculo_grande(
+                    total,
+                    lambda:
+                    self._iniciar_geracao_pdf(
+                        sistema
+                    ),
+                )
+
+            else:
+                Clock.schedule_once(
+                    lambda dt:
+                    self._iniciar_geracao_pdf(
+                        sistema
+                    ),
+                    0,
+                )
+
+        botao_sim.bind(
+            on_release=confirmar
+        )
+
+        popup.open()
+
+
+    # ========================================================
+    # INÍCIO REAL DA GERAÇÃO
+    # ========================================================
+
+    def _iniciar_geracao_pdf(
+        self,
+        sistema,
+    ):
+        if (
+            self.tarefa_pdf is not None
+            and self.tarefa_pdf.em_execucao
+        ):
+            return
+
+        self._ultimo_percentual_agendado = -1
+
+        if sistema == "atonal":
+
+            self.sistema_selecionado = (
+                "atonal"
+            )
+
+            self._mostrar_progresso_pdf_atonal()
+
+            self.tarefa_pdf = TarefaPDFAtonal(
+                vozes=self.vozes_atonais_selecionadas,
+                notas=list(
+                    self.notas_atonais_selecionadas
+                ),
+                pasta_saida=obter_pasta_saida_pdf(),
+                ao_progresso=self._callback_progresso_thread,
+                ao_concluir=self._callback_concluido_thread,
+                ao_erro=self._callback_erro_thread,
+            )
+
+        else:
+
+            self.sistema_selecionado = (
+                "tonal"
+            )
+
+            self._mostrar_progresso_pdf()
+
+            self.tarefa_pdf = TarefaPDF(
+                tonica=self.tonica_selecionada,
+                modo=self.modo_selecionado,
+                vozes=self.vozes_selecionadas,
+                notas=list(
+                    self.notas_selecionadas
+                ),
+                pasta_saida=obter_pasta_saida_pdf(),
+                ao_progresso=self._callback_progresso_thread,
+                ao_concluir=self._callback_concluido_thread,
+                ao_erro=self._callback_erro_thread,
+            )
+
+        try:
+            self.tarefa_pdf.iniciar()
+
+        except Exception as erro:
+
+            if sistema == "atonal":
+                self._mostrar_erro_atonal(
+                    str(erro)
+                )
+
+            else:
+                self._mostrar_erro_pdf(
+                    str(erro)
+                )
+
+
+    def _mostrar_aviso_calculo_grande(
+        self,
+        total,
+        ao_continuar,
+    ):
+        total_pdfs = (
+            total
+            + LIMITE_COMBINACOES_POR_PDF
+            - 1
+        ) // LIMITE_COMBINACOES_POR_PDF
+
+        popup = Popup(
+            title="SEGUNDA CONFIRMAÇÃO — PDF MUITO GRANDE",
+            size_hint=(0.94, 0.72),
+            auto_dismiss=False,
+        )
+
+        layout = BoxLayout(
+            orientation="vertical",
+            padding=dp(14),
+            spacing=dp(12),
+        )
+
+        mensagem = Label(
+            text=(
+                "[b]TEM CERTEZA QUE DESEJA CONTINUAR?[/b]\n\n"
+                f"Total: {self._numero_pt(total)} combinações.\n\n"
+                f"Serão gerados aproximadamente "
+                f"{self._numero_pt(total_pdfs)} PDF(s), "
+                "com no máximo "
+                f"{self._numero_pt(LIMITE_COMBINACOES_POR_PDF)} "
+                "combinações em cada arquivo.\n\n"
+                "Essa operação pode demorar bastante "
+                "e utilizar muito espaço de armazenamento."
+            ),
+            markup=True,
+            halign="center",
+            valign="middle",
+        )
+
+        mensagem.bind(
+            size=lambda obj, valor:
+            setattr(
+                obj,
+                "text_size",
+                valor,
+            )
+        )
+
+        botoes = BoxLayout(
+            size_hint_y=None,
+            height=dp(54),
             spacing=dp(10),
         )
 
         botao_continuar = Button(
-            text="CONTINUAR",
+            text="SIM, GERAR TODOS",
             bold=True,
             background_normal="",
             background_down="",
-            background_color=(0.18, 0.55, 0.28, 1),
+            background_color=(
+                0.18,
+                0.55,
+                0.28,
+                1,
+            ),
             color=(1, 1, 1, 1),
         )
 
@@ -2462,7 +3086,12 @@ class TelaPrincipal(BoxLayout):
             bold=True,
             background_normal="",
             background_down="",
-            background_color=(0.55, 0.18, 0.18, 1),
+            background_color=(
+                0.55,
+                0.18,
+                0.18,
+                1,
+            ),
             color=(1, 1, 1, 1),
         )
 
@@ -2488,8 +3117,10 @@ class TelaPrincipal(BoxLayout):
 
         def continuar(*_):
             popup.dismiss()
+
             Clock.schedule_once(
-                lambda dt: ao_continuar(),
+                lambda dt:
+                ao_continuar(),
                 0,
             )
 
@@ -2500,19 +3131,18 @@ class TelaPrincipal(BoxLayout):
         popup.open()
 
 
-    # ========================================================
-    # ATONAL - CÁLCULO NA INTERFACE
-    # ========================================================
-
     def _calcular_atonal_interface(
         self,
-        confirmado=False,
     ):
         if not self.notas_atonais_selecionadas:
             return
 
         if self.vozes_atonais_selecionadas not in (
-            3, 4, 5, 6, 7
+            3,
+            4,
+            5,
+            6,
+            7,
         ):
             return
 
@@ -2522,61 +3152,29 @@ class TelaPrincipal(BoxLayout):
         ):
             return
 
-        if not confirmado:
-            try:
-                previa = calcular_resultado_atonal(
-                    notas=list(
-                        self.notas_atonais_selecionadas
-                    ),
-                    vozes=self.vozes_atonais_selecionadas,
-                )
-
-                total_previa = previa[
-                    "total_combinacoes"
-                ]
-
-            except Exception as erro:
-                self._mostrar_erro_atonal(
-                    str(erro)
-                )
-                return
-
-            if (
-                total_previa
-                >= LIMITE_AVISO_COMBINACOES
-            ):
-                self._mostrar_aviso_calculo_grande(
-                    total_previa,
-                    lambda:
-                    self._calcular_atonal_interface(
-                        confirmado=True
-                    ),
-                )
-                return
-
-        self.sistema_selecionado = "atonal"
-        self._ultimo_percentual_agendado = -1
-
-        self._mostrar_progresso_pdf_atonal()
-
-        self.tarefa_pdf = TarefaPDFAtonal(
-            vozes=self.vozes_atonais_selecionadas,
-            notas=list(
-                self.notas_atonais_selecionadas
-            ),
-            pasta_saida=obter_pasta_saida_pdf(),
-            ao_progresso=self._callback_progresso_thread,
-            ao_concluir=self._callback_concluido_thread,
-            ao_erro=self._callback_erro_thread,
-        )
-
         try:
-            self.tarefa_pdf.iniciar()
+            resultado = calcular_resultado_atonal(
+                notas=list(
+                    self.notas_atonais_selecionadas
+                ),
+                vozes=self.vozes_atonais_selecionadas,
+            )
 
         except Exception as erro:
             self._mostrar_erro_atonal(
                 str(erro)
             )
+            return
+
+        self.sistema_selecionado = (
+            "atonal"
+        )
+
+        self._mostrar_previa_combinacoes(
+            resultado,
+            "atonal",
+            0,
+        )
 
 
     def _mostrar_progresso_pdf_atonal(
@@ -2869,100 +3467,42 @@ class TelaPrincipal(BoxLayout):
 
     def iniciar_calculo_pdf(
         self,
-        confirmado=False,
     ):
         if not self.notas_selecionadas:
             return
 
         if (
             self.tarefa_pdf is not None
-            and
-            self.tarefa_pdf.em_execucao
+            and self.tarefa_pdf.em_execucao
         ):
             return
 
-        if not confirmado:
-            try:
-                previa = calcular_resultado(
-                    tonica=self.tonica_selecionada,
-                    modo=self.modo_selecionado,
-                    vozes=self.vozes_selecionadas,
-                    notas=list(
-                        self.notas_selecionadas
-                    ),
-                )
-
-                total_previa = previa[
-                    "total_combinacoes"
-                ]
-
-            except Exception as erro:
-                self._mostrar_erro_pdf(
-                    str(erro)
-                )
-                return
-
-            if (
-                total_previa
-                >= LIMITE_AVISO_COMBINACOES
-            ):
-                self._mostrar_aviso_calculo_grande(
-                    total_previa,
-                    lambda:
-                    self.iniciar_calculo_pdf(
-                        confirmado=True
-                    ),
-                )
-                return
-
-        self._ultimo_percentual_agendado = (
-            -1
-        )
-
-        self._mostrar_progresso_pdf()
-
-        self.tarefa_pdf = TarefaPDF(
-            tonica=
-            self.tonica_selecionada,
-
-            modo=
-            self.modo_selecionado,
-
-            vozes=
-            self.vozes_selecionadas,
-
-            notas=
-            list(
-                self.notas_selecionadas
-            ),
-
-            pasta_saida=
-            obter_pasta_saida_pdf(),
-
-            ao_progresso=
-            self._callback_progresso_thread,
-
-            ao_concluir=
-            self._callback_concluido_thread,
-
-            ao_erro=
-            self._callback_erro_thread,
-        )
-
         try:
-
-            self.tarefa_pdf.iniciar()
+            resultado = calcular_resultado(
+                tonica=self.tonica_selecionada,
+                modo=self.modo_selecionado,
+                vozes=self.vozes_selecionadas,
+                notas=list(
+                    self.notas_selecionadas
+                ),
+            )
 
         except Exception as erro:
-
             self._mostrar_erro_pdf(
                 str(erro)
             )
+            return
 
+        self.sistema_selecionado = (
+            "tonal"
+        )
 
-    # ========================================================
-    # TELA DE PROGRESSO
-    # ========================================================
+        self._mostrar_previa_combinacoes(
+            resultado,
+            "tonal",
+            0,
+        )
+
 
     def _mostrar_progresso_pdf(
         self

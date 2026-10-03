@@ -7,6 +7,8 @@ package.domain = com.croger
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,otf
 
+icon.filename = %(source.dir)s/icon.png
+
 requirements = python3,kivy,Pillow
 
 version = 1.0
