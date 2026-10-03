@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Armazenamento e proteção de recursos para os PDFs.
+Armazenamento dos PDFs.
 
 ANDROID:
-- os PDFs são gerados primeiro na pasta privada do aplicativo;
-- depois são publicados em Download/Harmonizador via MediaStore;
-- o arquivo temporário privado é removido após a publicação;
-- a cópia para o MediaStore é feita em blocos, sem carregar o PDF inteiro na RAM.
+- espelhado no método comprovadamente funcional do commit
+  44296cce241163c94cbe718e1b8cc16419a36ee1;
+- grava diretamente em /storage/emulated/0/Download;
+- não usa MediaStore;
+- não usa ContentValues;
+- não usa JavaString/JavaInteger;
+- não copia o arquivo depois;
+- o ReportLab já cria o PDF diretamente na pasta pública.
 
 UBUNTU / X11:
-- mantém a saída de testes em projeto/pdf_gerados.
+- mantém a pasta local pdf_gerados para testes.
 """
 
 import gc
@@ -21,43 +25,59 @@ from pathlib import Path
 from kivy.utils import platform
 
 
-DESTINO_PUBLICO_ANDROID = "Download/Harmonizador"
-RESERVA_CRITICA_BYTES = 64 * 1024 * 1024  # 64 MiB
-TAMANHO_BLOCO_COPIA = 1024 * 1024          # 1 MiB
+PASTA_DOWNLOAD_ANDROID = os.path.join(
+    "/storage/emulated/0",
+    "Download"
+)
+
+PASTA_DESTINO_ANDROID = os.path.join(
+    PASTA_DOWNLOAD_ANDROID,
+    "Harmonia Ensaio de Harmonia Avançada"
+)
+
+DESTINO_PUBLICO_ANDROID = (
+    "Download/Harmonia Ensaio de Harmonia Avançada"
+)
+
+RESERVA_CRITICA_BYTES = (
+    64 * 1024 * 1024
+)
 
 
 # ============================================================
-# PASTA TEMPORÁRIA / PASTA DE TESTE
+# PASTA DE SAÍDA
 # ============================================================
 
 def obter_pasta_saida_pdf():
     """
-    Retorna uma pasta de sistema de arquivos para o ReportLab.
+    No Android devolve diretamente a mesma pasta pública usada
+    pela versão funcional antiga.
 
-    No Android, esta pasta é privada e funciona como área temporária.
-    Depois que cada PDF é fechado, ele é publicado em
-    Download/Harmonizador e o temporário é apagado.
+    O ReportLab grava o PDF diretamente nela.
     """
+
     if platform == "android":
-        from kivy.app import App
 
-        app = App.get_running_app()
-
-        if app is None:
-            raise RuntimeError(
-                "Aplicativo Android ainda não foi inicializado."
-            )
-
-        pasta = Path(app.user_data_dir) / "pdf_gerados_temporarios"
-
-    else:
-        base = (
-            Path(__file__)
-            .resolve()
-            .parent
-            .parent
+        os.makedirs(
+            PASTA_DESTINO_ANDROID,
+            exist_ok=True,
         )
-        pasta = base / "pdf_gerados"
+
+        return Path(
+            PASTA_DESTINO_ANDROID
+        )
+
+    base = (
+        Path(__file__)
+        .resolve()
+        .parent
+        .parent
+    )
+
+    pasta = (
+        base
+        / "pdf_gerados"
+    )
 
     pasta.mkdir(
         parents=True,
@@ -68,12 +88,15 @@ def obter_pasta_saida_pdf():
 
 
 # ============================================================
-# DESTINO MOSTRADO AO USUÁRIO
+# DESTINO MOSTRADO NA INTERFACE
 # ============================================================
 
 def obter_destino_exibicao_pdf():
+
     if platform == "android":
-        return DESTINO_PUBLICO_ANDROID
+        return (
+            DESTINO_PUBLICO_ANDROID
+        )
 
     return str(
         obter_pasta_saida_pdf()
@@ -84,21 +107,34 @@ def obter_destino_exibicao_pdf():
 # ESPAÇO LIVRE
 # ============================================================
 
-def _pasta_para_medicao_espaco(pasta_referencia=None):
+def _pasta_para_medicao_espaco(
+    pasta_referencia=None
+):
+
     if pasta_referencia is not None:
-        pasta = Path(pasta_referencia)
+
+        pasta = Path(
+            pasta_referencia
+        )
+
         pasta.mkdir(
             parents=True,
             exist_ok=True,
         )
+
         return pasta
 
     return obter_pasta_saida_pdf()
 
 
-def obter_espaco_livre_bytes(pasta_referencia=None):
-    pasta = _pasta_para_medicao_espaco(
-        pasta_referencia
+def obter_espaco_livre_bytes(
+    pasta_referencia=None
+):
+
+    pasta = (
+        _pasta_para_medicao_espaco(
+            pasta_referencia
+        )
     )
 
     return shutil.disk_usage(
@@ -108,24 +144,34 @@ def obter_espaco_livre_bytes(pasta_referencia=None):
 
 def verificar_espaco_para_pdf(
     pasta_referencia=None,
-    reserva_minima_bytes=RESERVA_CRITICA_BYTES,
+    reserva_minima_bytes=
+    RESERVA_CRITICA_BYTES,
 ):
-    """
-    Não limita a quantidade de combinações.
-    Apenas interrompe quando o armazenamento já está criticamente baixo.
-    """
-    livre = obter_espaco_livre_bytes(
-        pasta_referencia
+
+    livre = (
+        obter_espaco_livre_bytes(
+            pasta_referencia
+        )
     )
 
     if livre < reserva_minima_bytes:
-        livre_mb = livre / (1024 * 1024)
-        minimo_mb = reserva_minima_bytes / (1024 * 1024)
+
+        livre_mb = (
+            livre
+            / (1024 * 1024)
+        )
+
+        minimo_mb = (
+            reserva_minima_bytes
+            / (1024 * 1024)
+        )
 
         raise RuntimeError(
-            "Espaço de armazenamento criticamente baixo. "
+            "Espaço de armazenamento "
+            "criticamente baixo. "
             f"Livre: {livre_mb:.1f} MB. "
-            f"Reserve pelo menos {minimo_mb:.0f} MB e tente novamente."
+            f"Reserve pelo menos "
+            f"{minimo_mb:.0f} MB."
         )
 
     return livre
@@ -136,12 +182,7 @@ def verificar_espaco_para_pdf(
 # ============================================================
 
 def manutencao_memoria():
-    """
-    Libera objetos Python alcançáveis pelo coletor e, no Android,
-    verifica se o próprio sistema já sinalizou estado de pouca memória.
 
-    A quantidade de combinações nunca é usada para bloquear a geração.
-    """
     gc.collect()
 
     if platform != "android":
@@ -153,282 +194,90 @@ def manutencao_memoria():
         PythonActivity = autoclass(
             "org.kivy.android.PythonActivity"
         )
+
         Context = autoclass(
             "android.content.Context"
         )
-        ActivityManagerMemoryInfo = autoclass(
+
+        MemoryInfo = autoclass(
             "android.app.ActivityManager$MemoryInfo"
         )
 
-        activity = PythonActivity.mActivity
-        manager = activity.getSystemService(
-            Context.ACTIVITY_SERVICE
+        activity = (
+            PythonActivity.mActivity
         )
 
-        info = ActivityManagerMemoryInfo()
-        manager.getMemoryInfo(info)
+        manager = (
+            activity.getSystemService(
+                Context.ACTIVITY_SERVICE
+            )
+        )
+
+        info = MemoryInfo()
+
+        manager.getMemoryInfo(
+            info
+        )
 
         if bool(info.lowMemory):
+
             disponivel_mb = (
                 int(info.availMem)
                 / (1024 * 1024)
             )
 
             raise MemoryError(
-                "O Android informou memória criticamente baixa "
-                "durante a geração do PDF. "
-                f"Memória disponível aproximada: {disponivel_mb:.0f} MB. "
-                "A geração foi interrompida antes que o sistema "
-                "encerrasse o aplicativo. Feche outros aplicativos "
-                "e tente novamente."
+                "O Android informou memória "
+                "criticamente baixa. "
+                f"Disponível: "
+                f"{disponivel_mb:.0f} MB."
             )
 
     except MemoryError:
         raise
 
     except Exception:
-        # A proteção de memória é complementar. Se a consulta ao Android
-        # não estiver disponível em algum aparelho, a geração continua.
         return False
 
     return False
 
 
 # ============================================================
-# PUBLICAÇÃO NO DOWNLOAD/HARMONIZADOR
+# PUBLICAÇÃO
+#
+# Na versão antiga não existia publicação/cópia.
+# O PDF já era criado diretamente no Download.
+#
+# Esta função permanece apenas para compatibilidade com os
+# geradores modulares atuais.
 # ============================================================
 
-def _publicar_android_mediastore(caminho):
-    from jnius import autoclass
+def publicar_pdf_gerado(
+    caminho_pdf
+):
 
-    PythonActivity = autoclass(
-        "org.kivy.android.PythonActivity"
-    )
-    ContentValues = autoclass(
-        "android.content.ContentValues"
-    )
-    MediaStoreDownloads = autoclass(
-        "android.provider.MediaStore$Downloads"
-    )
-    MediaStoreMediaColumns = autoclass(
-        "android.provider.MediaStore$MediaColumns"
-    )
-    BuildVersion = autoclass(
-        "android.os.Build$VERSION"
-    )
-    JavaString = autoclass(
-        "java.lang.String"
-    )
-    JavaInteger = autoclass(
-        "java.lang.Integer"
-    )
-
-    def jstring(valor):
-        return JavaString(
-            str(valor)
-        )
-
-    activity = PythonActivity.mActivity
-    resolver = activity.getContentResolver()
-
-    # Android 10+:
-    # publica pelo MediaStore dentro de Download/Harmonizador.
-    if int(BuildVersion.SDK_INT) >= 29:
-
-        values = ContentValues()
-
-        values.put(
-            jstring(
-                MediaStoreMediaColumns.DISPLAY_NAME
-            ),
-            jstring(
-                caminho.name
-            ),
-        )
-
-        values.put(
-            jstring(
-                MediaStoreMediaColumns.MIME_TYPE
-            ),
-            jstring(
-                "application/pdf"
-            ),
-        )
-
-        values.put(
-            jstring(
-                MediaStoreMediaColumns.RELATIVE_PATH
-            ),
-            jstring(
-                DESTINO_PUBLICO_ANDROID
-            ),
-        )
-
-        values.put(
-            jstring(
-                MediaStoreMediaColumns.IS_PENDING
-            ),
-            JavaInteger.valueOf(1),
-        )
-
-        uri = resolver.insert(
-            MediaStoreDownloads.EXTERNAL_CONTENT_URI,
-            values,
-        )
-
-        if uri is None:
-            raise RuntimeError(
-                "O Android não conseguiu criar "
-                "o arquivo em Download/Harmonizador."
-            )
-
-        saida = None
-
-        try:
-            saida = resolver.openOutputStream(
-                uri,
-                jstring("w"),
-            )
-
-            if saida is None:
-                raise RuntimeError(
-                    "Não foi possível abrir o destino "
-                    "do PDF no armazenamento do Android."
-                )
-
-            with caminho.open("rb") as origem:
-
-                while True:
-
-                    bloco = origem.read(
-                        TAMANHO_BLOCO_COPIA
-                    )
-
-                    if not bloco:
-                        break
-
-                    try:
-                        saida.write(
-                            bloco
-                        )
-
-                    except Exception:
-                        saida.write(
-                            bytearray(bloco)
-                        )
-
-            saida.flush()
-            saida.close()
-            saida = None
-
-            finalizar = ContentValues()
-
-            finalizar.put(
-                jstring(
-                    MediaStoreMediaColumns.IS_PENDING
-                ),
-                JavaInteger.valueOf(0),
-            )
-
-            resolver.update(
-                uri,
-                finalizar,
-                None,
-                None,
-            )
-
-            return str(uri)
-
-        except Exception:
-
-            try:
-                if saida is not None:
-                    saida.close()
-            except Exception:
-                pass
-
-            try:
-                resolver.delete(
-                    uri,
-                    None,
-                    None,
-                )
-            except Exception:
-                pass
-
-            raise
-
-    # Android 9 ou inferior.
-    pasta_download = Path(
-        "/storage/emulated/0/Download/Harmonizador"
-    )
-
-    pasta_download.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    destino = (
-        pasta_download
-        / caminho.name
-    )
-
-    with caminho.open("rb") as origem:
-        with destino.open("wb") as saida:
-
-            shutil.copyfileobj(
-                origem,
-                saida,
-                length=TAMANHO_BLOCO_COPIA,
-            )
-
-    return str(destino)
-
-
-def publicar_pdf_gerado(caminho_pdf):
-    """
-    Publica um PDF finalizado e retorna seus metadados.
-
-    No Android, o arquivo temporário é excluído somente depois de a
-    publicação pública ter sido concluída com sucesso.
-    """
     caminho = Path(
         caminho_pdf
     )
 
     if not caminho.exists():
+
         raise FileNotFoundError(
-            f"PDF temporário não encontrado: {caminho}"
+            "PDF não encontrado após "
+            f"a geração: {caminho}"
         )
 
-    tamanho_bytes = caminho.stat().st_size
-
-    verificar_espaco_para_pdf(
-        caminho.parent
+    tamanho_bytes = (
+        caminho.stat().st_size
     )
-
-    if platform == "android":
-        destino = _publicar_android_mediastore(
-            caminho
-        )
-
-        # O PDF já está em Download/Harmonizador. A cópia privada não é
-        # necessária e ocuparia espaço em dobro.
-        try:
-            caminho.unlink()
-        except FileNotFoundError:
-            pass
-
-        return {
-            "nome": caminho.name,
-            "caminho": destino,
-            "tamanho_bytes": tamanho_bytes,
-            "destino_exibicao": DESTINO_PUBLICO_ANDROID,
-        }
 
     return {
         "nome": caminho.name,
         "caminho": str(caminho),
         "tamanho_bytes": tamanho_bytes,
-        "destino_exibicao": str(caminho.parent),
+        "destino_exibicao": (
+            DESTINO_PUBLICO_ANDROID
+            if platform == "android"
+            else str(caminho.parent)
+        ),
     }
